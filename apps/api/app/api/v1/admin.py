@@ -54,23 +54,84 @@ def get_system_status(db: Session = Depends(get_db)):
         )
     )
 
-    # 4. Stripe Payments
+    # 4. Primary Payment Provider (Razorpay)
+    is_rzp_active = settings.PAYMENT_PROVIDER.lower() == "razorpay"
+    has_rzp = bool(
+        settings.RAZORPAY_KEY_ID
+        and settings.RAZORPAY_KEY_SECRET
+        and not settings.RAZORPAY_KEY_ID.startswith("rzp_test_example")
+    )
+    is_rzp_test = bool(settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_ID.startswith("rzp_test"))
+
+    if is_rzp_active:
+        if has_rzp and not is_rzp_test:
+            rzp_tier = "PRODUCTION CONFIGURED"
+            rzp_status = "healthy"
+            rzp_details = "Razorpay Live Mode Active. Note: For collecting international USD/EUR/GBP, ensure 'International Payments' toggle is approved and active in your Razorpay Dashboard."
+        elif has_rzp and is_rzp_test:
+            rzp_tier = "TEST MODE"
+            rzp_status = "healthy"
+            rzp_details = "Razorpay Test Mode Active. Simulated and sandbox payments enabled."
+        else:
+            rzp_tier = "IMPLEMENTED (Sandbox Mode)"
+            rzp_status = "not_configured"
+            rzp_details = "Razorpay provider is fully implemented. Running in local test sandbox. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to connect live account."
+
+        services.append(
+            ServiceHealth(
+                name=f"Payment Provider (Razorpay - ACTIVE - {rzp_tier})",
+                configured=has_rzp,
+                status=rzp_status,
+                details=rzp_details,
+                required_variables=["PAYMENT_PROVIDER", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"],
+                setup_url="https://dashboard.razorpay.com/app/keys",
+            )
+        )
+    else:
+        services.append(
+            ServiceHealth(
+                name="Payment Provider (Razorpay)",
+                configured=has_rzp,
+                status="healthy" if has_rzp else "not_configured",
+                details="Razorpay is implemented as an alternate provider. Set PAYMENT_PROVIDER=razorpay to activate.",
+                required_variables=["PAYMENT_PROVIDER", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+                setup_url="https://dashboard.razorpay.com/app/keys",
+            )
+        )
+
+    # 5. Secondary Payment Provider (Stripe)
+    is_stripe_active = settings.PAYMENT_PROVIDER.lower() == "stripe"
     has_stripe = bool(
         settings.STRIPE_SECRET_KEY
         and not settings.STRIPE_SECRET_KEY.startswith("sk_test_example")
     )
-    services.append(
-        ServiceHealth(
-            name="Stripe Payments",
-            configured=has_stripe,
-            status="healthy" if has_stripe else "not_configured",
-            details="Production subscription & webhook billing live." if has_stripe else "Operating in safe simulation mode.",
-            required_variables=["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET"],
-            setup_url="https://dashboard.stripe.com/apikeys",
-        )
-    )
+    is_stripe_test = bool(settings.STRIPE_SECRET_KEY and settings.STRIPE_SECRET_KEY.startswith("sk_test"))
 
-    # 5. Meta WhatsApp Business API
+    if is_stripe_active:
+        stripe_tier = "PRODUCTION CONFIGURED" if (has_stripe and not is_stripe_test) else ("TEST MODE" if has_stripe else "IMPLEMENTED (Sandbox Mode)")
+        services.append(
+            ServiceHealth(
+                name=f"Payment Provider (Stripe - ACTIVE - {stripe_tier})",
+                configured=has_stripe,
+                status="healthy" if has_stripe else "not_configured",
+                details="Stripe payments active." if has_stripe else "Operating in safe simulation mode.",
+                required_variables=["PAYMENT_PROVIDER", "STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET"],
+                setup_url="https://dashboard.stripe.com/apikeys",
+            )
+        )
+    else:
+        services.append(
+            ServiceHealth(
+                name="Payment Provider (Stripe - Modular Secondary)",
+                configured=has_stripe,
+                status="healthy" if has_stripe else "not_configured",
+                details="Stripe is implemented as an optional modular provider. Not required when Razorpay is active.",
+                required_variables=["PAYMENT_PROVIDER", "STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"],
+                setup_url="https://dashboard.stripe.com/apikeys",
+            )
+        )
+
+    # 6. Meta WhatsApp Business API
     has_meta = bool(
         settings.META_ACCESS_TOKEN
         and settings.META_PHONE_NUMBER_ID
@@ -87,7 +148,7 @@ def get_system_status(db: Session = Depends(get_db)):
         )
     )
 
-    # 6. Google Calendar OAuth
+    # 7. Google Calendar OAuth
     has_google = bool(
         settings.GOOGLE_CLIENT_ID
         and not settings.GOOGLE_CLIENT_ID.startswith("your-")

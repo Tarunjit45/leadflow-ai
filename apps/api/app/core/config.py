@@ -1,7 +1,6 @@
 import os
 from typing import List, Optional
 from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -27,7 +26,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
-    # Database
+    # Database (PostgreSQL / SQLite fallback)
     DATABASE_URL: str = "sqlite:///./leadflow_local.db"
     
     # Redis Queue
@@ -53,7 +52,18 @@ class Settings(BaseSettings):
     META_PHONE_NUMBER_ID: Optional[str] = None
     META_WABA_ID: Optional[str] = None
 
-    # Stripe Payments
+    # Billing & Payment Provider Abstraction (Default: razorpay)
+    PAYMENT_PROVIDER: str = "razorpay"  # "razorpay" or "stripe"
+    BILLING_CURRENCY: str = "USD"       # Default international display currency (USD, EUR, GBP, INR, etc.)
+
+    # Razorpay Provider Configuration (Primary for India & International SaaS)
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
+    RAZORPAY_PLAN_STARTER_MONTHLY: str = "plan_starter_99_usd"
+    RAZORPAY_PLAN_GROWTH_MONTHLY: str = "plan_growth_199_usd"
+
+    # Stripe Provider Configuration (Modular secondary provider)
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_PUBLISHABLE_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None

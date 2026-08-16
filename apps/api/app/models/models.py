@@ -294,12 +294,26 @@ class Subscription(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     business_id = Column(String(36), ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-    provider = Column(String(50), default="stripe")
+    provider = Column(String(50), default="razorpay")  # razorpay or stripe
+    
+    # Generic provider IDs
+    provider_customer_id = Column(String(255), nullable=True)
+    provider_subscription_id = Column(String(255), nullable=True)
+    provider_product_id = Column(String(255), nullable=True)
+    provider_price_id = Column(String(255), nullable=True)
+    
+    # Backwards compatibility legacy aliases
     customer_id = Column(String(255), nullable=True)
     subscription_id = Column(String(255), nullable=True)
     price_id = Column(String(255), nullable=True)
+
+    # Multi-currency & pricing
+    currency = Column(String(10), default="USD")
+    amount = Column(Float, default=99.0)
+    billing_interval = Column(String(20), default="month")  # month, year
+
     plan_tier = Column(String(50), default="trial")   # trial, starter, growth, enterprise
-    status = Column(String(50), default="trialing")   # trialing, active, past_due, canceled, unpaid
+    status = Column(String(50), default="trialing")   # normalized: trialing, active, past_due, cancelled, expired, paused
     current_period_start = Column(DateTime, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
     cancel_at_period_end = Column(Boolean, default=False)

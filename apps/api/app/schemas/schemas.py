@@ -359,15 +359,49 @@ class AnalyticsSummaryOut(BaseModel):
 
 # --- Billing & Subscription Schemas ---
 class SubscriptionOut(BaseModel):
+    provider: str = "razorpay"
     plan_tier: str
-    status: str
+    status: str  # normalized: trialing, active, past_due, cancelled, expired, paused
+    currency: str = "USD"
+    amount: float = 99.0
+    billing_interval: str = "month"
     messages_count: int
     messages_limit: int
     leads_count: int
     appointments_count: int
     appointments_limit: int
+    current_period_start: Optional[datetime] = None
     current_period_end: Optional[datetime] = None
     cancel_at_period_end: bool = False
+    provider_subscription_id: Optional[str] = None
+    provider_customer_id: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class SubscriptionCheckoutRequest(BaseModel):
+    plan_tier: str = "growth"  # starter, growth, enterprise
+    currency: Optional[str] = "USD"
+    provider: Optional[str] = None  # None -> defaults to settings.PAYMENT_PROVIDER
+
+
+class SubscriptionCheckoutResponse(BaseModel):
+    id: str
+    provider: str
+    checkout_url: Optional[str] = None
+    key_id: Optional[str] = None
+    subscription_id: Optional[str] = None
+    amount: float = 99.0
+    currency: str = "USD"
+    plan_tier: str = "growth"
+    simulated: bool = False
+
+
+class PortalResponse(BaseModel):
+    url: str
+    provider: str
+    message: Optional[str] = None
+    simulated: bool = False
 
 
 # --- Agent Test Console Schemas ---

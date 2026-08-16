@@ -12,6 +12,18 @@ Below is the complete reference of all environment variables supported by LeadFl
 | `OPENROUTER_API_KEY` | Optional | `None` | OpenRouter API Key (e.g. `sk-or-v1-...`) |
 | `OPENROUTER_MODEL` | No | `google/gemini-2.0-flash-001` | Primary model identifier |
 | `AI_FALLBACK_MODEL` | No | `anthropic/claude-3.5-haiku` | Fallback model if primary fails |
+| `PAYMENT_PROVIDER` | No | `razorpay` | Active billing provider: `razorpay` (default) or `stripe` |
+| `BILLING_CURRENCY` | No | `USD` | Display & billing currency (`USD`, `EUR`, `GBP`, `INR`, `CAD`, `AUD`) |
+| `RAZORPAY_KEY_ID` | Optional | `None` | Razorpay Key ID (e.g. `rzp_test_...` or `rzp_live_...`) |
+| `RAZORPAY_KEY_SECRET` | Optional | `None` | Razorpay Key Secret |
+| `RAZORPAY_WEBHOOK_SECRET` | Optional | `None` | Razorpay Webhook HMAC signing secret |
+| `RAZORPAY_PLAN_STARTER_MONTHLY` | No | `plan_starter_99_usd` | Razorpay Plan ID for Starter ($99/mo) |
+| `RAZORPAY_PLAN_GROWTH_MONTHLY` | No | `plan_growth_199_usd` | Razorpay Plan ID for Growth ($199/mo) |
+| `STRIPE_SECRET_KEY` | Optional | `None` | Stripe Secret API Key (`sk_test_...` or `sk_live_...`) |
+| `STRIPE_PUBLISHABLE_KEY` | Optional | `None` | Stripe Publishable Key (`pk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Optional | `None` | Stripe Webhook signing secret (`whsec_...`) |
+| `STRIPE_PRICE_STARTER_MONTHLY` | No | `price_starter_monthly_99` | Stripe Price ID for Starter ($99/mo) |
+| `STRIPE_PRICE_GROWTH_MONTHLY` | No | `price_growth_monthly_199` | Stripe Price ID for Growth ($199/mo) |
 | `META_APP_ID` | Optional | `None` | Meta Developer App ID |
 | `META_APP_SECRET` | Optional | `None` | Meta App Secret for verifying webhook HMAC signatures |
 | `META_VERIFY_TOKEN` | Yes | `leadflow_whatsapp...` | Webhook verification token handshake string |
@@ -20,8 +32,3 @@ Below is the complete reference of all environment variables supported by LeadFl
 | `GOOGLE_CLIENT_ID` | Optional | `None` | Google Cloud OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Optional | `None` | Google Cloud OAuth Client Secret |
 | `GOOGLE_REDIRECT_URI` | Yes | `http://localhost:8000/...` | Google OAuth callback redirect URL |
-| `STRIPE_SECRET_KEY` | Optional | `None` | Stripe Secret API Key (`sk_test_...` or `sk_live_...`) |
-| `STRIPE_PUBLISHABLE_KEY` | Optional | `None` | Stripe Publishable Key (`pk_test_...`) |
-| `STRIPE_WEBHOOK_SECRET` | Optional | `None` | Stripe Webhook signing secret (`whsec_...`) |
-| `STRIPE_PRICE_STARTER_MONTHLY` | No | `price_starter_monthly_99` | Stripe Price ID for Starter ($99/mo) |
-| `STRIPE_PRICE_GROWTH_MONTHLY` | No | `price_growth_monthly_199` | Stripe Price ID for Growth ($199/mo) |

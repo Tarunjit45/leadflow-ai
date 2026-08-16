@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from apps.api.app.core.database import get_db
 from apps.api.app.core.idempotency import is_event_processed, mark_event_processed
 from apps.api.app.integrations.whatsapp import WhatsAppProvider
-from apps.api.app.integrations.stripe_billing import stripe_billing
+from apps.api.app.integrations.payments import get_payment_provider
 from apps.api.app.models.models import Business, Conversation, Message, Subscription
 from apps.api.app.agents.runtime import AgentRuntime
 
@@ -52,7 +52,6 @@ async def receive_whatsapp_message(
     except Exception:
         return {"status": "ignored_invalid_json"}
 
-    # Extract entry and changes
     entry_list = data.get("entry", [])
     if not entry_list:
         return {"status": "ok_empty_entry"}
@@ -71,7 +70,6 @@ async def receive_whatsapp_message(
                 from_number = msg.get("from")
                 msg_type = msg.get("type")
 
-                # Webhook idempotency
                 if is_event_processed("whatsapp", msg_id):
                     logger.info(f"WhatsApp message {msg_id} already processed. Skipping duplicate.")
                     continue
@@ -84,12 +82,10 @@ async def receive_whatsapp_message(
                 if not text_content:
                     continue
 
-                # Find or assign business
                 business = db.query(Business).first()
                 if not business:
                     continue
 
-                # Find or create conversation
                 conv = db.query(Conversation).filter(
                     Conversation.business_id == business.id,
                     Conversation.customer_id == from_number,
@@ -109,7 +105,6 @@ async def receive_whatsapp_message(
                     db.commit()
                     db.refresh(conv)
 
-                # Add customer incoming message
                 customer_msg = Message(
                     conversation_id=conv.id,
                     sender_type="customer",
@@ -122,7 +117,6 @@ async def receive_whatsapp_message(
                 conv.last_message_preview = text_content[:150]
                 db.commit()
 
-                # Trigger AI Agent Runtime
                 runtime = AgentRuntime(db)
                 agent_res = await runtime.process_incoming_message(
                     business_id=business.id,
@@ -131,11 +125,72 @@ async def receive_whatsapp_message(
                     sender_type="customer",
                 )
 
-                # Send outbound reply back via WhatsApp Cloud API
                 if agent_res.get("response_text"):
                     await whatsapp.send_text_message(from_number, agent_res["response_text"])
 
     return {"status": "processed"}
+
+
+# --- Razorpay Webhooks ---
+@router.post("/razorpay")
+async def receive_razorpay_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Processes Razorpay subscription, payment, and lifecycle webhook events."""
+    raw_body = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+
+    provider = get_payment_provider("razorpay")
+    if not provider.verify_webhook_signature(raw_body, signature):
+        logger.error("Invalid Razorpay webhook signature")
+        raise HTTPException(status_code=400, detail="Invalid Razorpay webhook signature.")
+
+    event = provider.parse_webhook_event(raw_body, signature)
+    event_id = event.get("event_id")
+    event_type = event.get("event_type")
+
+    if is_event_processed("razorpay", event_id):
+        return {"status": "already_processed"}
+    mark_event_processed("razorpay", event_id)
+
+    business_id = event.get("business_id")
+    sub_id = event.get("provider_subscription_id")
+    norm_status = event.get("normalized_status", "active")
+    plan_tier = event.get("plan_tier", "starter")
+
+    # Find subscription by business_id or provider_subscription_id
+    sub = None
+    if business_id:
+        sub = db.query(Subscription).filter(Subscription.business_id == business_id).first()
+    elif sub_id:
+        sub = db.query(Subscription).filter(
+            (Subscription.provider_subscription_id == sub_id) | (Subscription.subscription_id == sub_id)
+        ).first()
+
+    if not sub:
+        # Fallback to demo business if available
+        sub = db.query(Subscription).first()
+
+    if sub:
+        sub.provider = "razorpay"
+        sub.status = norm_status
+        sub.plan_tier = plan_tier
+        if sub_id:
+            sub.provider_subscription_id = sub_id
+        if event.get("provider_customer_id"):
+            sub.provider_customer_id = event.get("provider_customer_id")
+        if event.get("currency"):
+            sub.currency = event.get("currency")
+        if event.get("amount"):
+            sub.amount = event.get("amount")
+
+        is_growth = plan_tier.lower() == "growth"
+        sub.messages_limit = 2500 if is_growth else 1000
+        sub.appointments_limit = 250 if is_growth else 100
+        db.commit()
+
+    return {"status": "success", "provider": "razorpay", "event": event_type, "normalized_status": norm_status}
 
 
 # --- Stripe Webhooks ---
@@ -148,54 +203,48 @@ async def receive_stripe_webhook(
     raw_body = await request.body()
     sig_header = request.headers.get("Stripe-Signature", "")
 
-    try:
-        event = stripe_billing.construct_webhook_event(raw_body, sig_header)
-    except Exception as e:
-        logger.error(f"Stripe webhook signature error: {str(e)}")
+    provider = get_payment_provider("stripe")
+    if not provider.verify_webhook_signature(raw_body, sig_header):
         raise HTTPException(status_code=400, detail="Invalid Stripe webhook signature.")
 
-    event_id = event.get("id")
-    event_type = event.get("type")
+    event = provider.parse_webhook_event(raw_body, sig_header)
+    event_id = event.get("event_id")
+    event_type = event.get("event_type")
 
     if is_event_processed("stripe", event_id):
         return {"status": "already_processed"}
     mark_event_processed("stripe", event_id)
 
-    data_object = event.get("data", {}).get("object", {})
+    business_id = event.get("business_id")
+    sub_id = event.get("provider_subscription_id")
+    norm_status = event.get("normalized_status", "active")
+    plan_tier = event.get("plan_tier", "starter")
 
-    if event_type == "checkout.session.completed":
-        business_id = data_object.get("client_reference_id") or data_object.get("metadata", {}).get("business_id")
-        plan_tier = data_object.get("metadata", {}).get("plan_tier", "starter")
-        sub_id = data_object.get("subscription")
-        cust_id = data_object.get("customer")
+    sub = None
+    if business_id:
+        sub = db.query(Subscription).filter(Subscription.business_id == business_id).first()
+    elif sub_id:
+        sub = db.query(Subscription).filter(
+            (Subscription.provider_subscription_id == sub_id) | (Subscription.subscription_id == sub_id)
+        ).first()
 
-        if business_id:
-            sub = db.query(Subscription).filter(Subscription.business_id == business_id).first()
-            if not sub:
-                sub = Subscription(business_id=business_id)
-                db.add(sub)
-            
-            sub.plan_tier = plan_tier
-            sub.status = "active"
+    if not sub:
+        sub = db.query(Subscription).first()
+
+    if sub:
+        sub.provider = "stripe"
+        sub.status = norm_status
+        sub.plan_tier = plan_tier
+        if sub_id:
+            sub.provider_subscription_id = sub_id
             sub.subscription_id = sub_id
-            sub.customer_id = cust_id
-            sub.messages_limit = 2500 if plan_tier == "growth" else 1000
-            sub.appointments_limit = 250 if plan_tier == "growth" else 100
-            db.commit()
+        if event.get("provider_customer_id"):
+            sub.provider_customer_id = event.get("provider_customer_id")
+            sub.customer_id = event.get("provider_customer_id")
+        
+        is_growth = plan_tier.lower() == "growth"
+        sub.messages_limit = 2500 if is_growth else 1000
+        sub.appointments_limit = 250 if is_growth else 100
+        db.commit()
 
-    elif event_type == "customer.subscription.updated":
-        sub_id = data_object.get("id")
-        status_val = data_object.get("status")
-        sub = db.query(Subscription).filter(Subscription.subscription_id == sub_id).first()
-        if sub:
-            sub.status = status_val
-            db.commit()
-
-    elif event_type == "customer.subscription.deleted":
-        sub_id = data_object.get("id")
-        sub = db.query(Subscription).filter(Subscription.subscription_id == sub_id).first()
-        if sub:
-            sub.status = "canceled"
-            db.commit()
-
-    return {"status": "success", "event": event_type}
+    return {"status": "success", "provider": "stripe", "event": event_type, "normalized_status": norm_status}
