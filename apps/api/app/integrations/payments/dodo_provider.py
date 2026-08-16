@@ -336,15 +336,39 @@ class DodoPaymentsProvider(BasePaymentProvider):
             event_data.get("subscription_id")
             or event_data.get("id")
             or event_data.get("subscription", {}).get("id")
+            or event_data.get("subscription", {}).get("subscription_id")
         )
         cust_id = (
             event_data.get("customer_id")
             or event_data.get("customer", {}).get("id")
+            or event_data.get("customer", {}).get("customer_id")
         )
-        metadata = event_data.get("metadata") or {}
+        product_id = (
+            event_data.get("product_id")
+            or event_data.get("subscription", {}).get("product_id")
+        )
+        metadata = (
+            event_data.get("metadata")
+            or event_data.get("subscription", {}).get("metadata")
+            or {}
+        )
         business_id = metadata.get("business_id")
-        plan_tier = metadata.get("plan_tier", "starter")
-        raw_status = event_data.get("status") or event_type
+        plan_tier = metadata.get("plan_tier")
+        
+        # Fallback to product_id matching if plan_tier was not in metadata
+        if not plan_tier:
+            if product_id == getattr(settings, "DODO_PAYMENTS_PRODUCT_GROWTH", ""):
+                plan_tier = "growth"
+            elif product_id == getattr(settings, "DODO_PAYMENTS_PRODUCT_STARTER", ""):
+                plan_tier = "starter"
+            else:
+                plan_tier = "growth" if "growth" in str(product_id).lower() else "starter"
+
+        raw_status = event_data.get("status") or event_data.get("subscription_status") or event_type
+
+        # Amount parsing (Dodo sends amount in cents/cents integer or float)
+        raw_amt = event_data.get("amount") or event_data.get("total_amount") or (19900 if plan_tier == "growth" else 9900)
+        parsed_amt = float(raw_amt) / 100.0 if (isinstance(raw_amt, int) and raw_amt > 1000) else float(raw_amt or 99.0)
 
         return {
             "event_id": event_id,
@@ -353,10 +377,11 @@ class DodoPaymentsProvider(BasePaymentProvider):
             "business_id": business_id,
             "provider_subscription_id": sub_id,
             "provider_customer_id": cust_id,
+            "provider_product_id": product_id,
             "plan_tier": plan_tier,
             "normalized_status": self.normalize_status(raw_status),
             "currency": event_data.get("currency", "USD"),
-            "amount": (event_data.get("amount") or event_data.get("total_amount") or 9900) / 100.0 if isinstance(event_data.get("amount"), int) else float(event_data.get("amount") or 99.0),
+            "amount": parsed_amt,
             "raw_event": data,
         }
 
