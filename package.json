@@ -1,0 +1,34 @@
+{
+  "name": "leadflow-ai-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LeadFlow AI - AI-powered lead recovery, qualification, follow-up, and appointment-booking SaaS",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:all": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "python -m uvicorn apps.api.app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:worker": "python -m apps.api.app.workers.worker",
+    "build": "npm run build --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/web",
+    "test:api": "pytest apps/api/tests",
+    "test:web": "npm run test --workspace=apps/web",
+    "seed": "python -m database.seeds.seed_demo"
+  },
+  "keywords": [
+    "lead-generation",
+    "ai-agent",
+    "appointment-booking",
+    "fastapi",
+    "nextjs",
+    "whatsapp",
+    "calendar",
+    "saas"
+  ],
+  "author": "LeadFlow AI Team",
+  "license": "MIT"
+}
