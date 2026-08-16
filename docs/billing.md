@@ -1,117 +1,128 @@
-# Payment & Subscription Architecture Guide
+# Payment & Subscription Architecture — Dodo Payments Integration
 
-LeadFlow AI features a modular **Payment Provider Abstraction Layer** (`PaymentProvider`) designed specifically to support India-based and international SaaS businesses with zero friction.
+LeadFlow AI is engineered for global SaaS distribution using a modular **Payment Provider Abstraction Layer** (`PaymentProvider`), with **Dodo Payments as the primary default payment provider** (`PAYMENT_PROVIDER=dodo`) and **Stripe preserved as an optional modular secondary provider**.
 
 ```
-PaymentProvider (Abstract Base Interface)
-├── RazorpayProvider (Default & Primary — Built for India & International SaaS)
-└── StripeProvider (Modular Secondary — Available for Global Markets)
+PaymentProvider (Abstract Interface)
+├── DodoPaymentsProvider (Default & Primary — Built for International SaaS from India)
+└── StripeProvider (Optional Secondary — Zero mutual dependency)
 ```
 
 ---
 
-## 1. Provider Abstraction & Configuration
+## 1. Provider Architecture & Factory
 
-The application determines the active payment provider at runtime via `PAYMENT_PROVIDER` in your `.env` file:
+The payment provider is decoupled from business logic. The application instantiates the configured provider at runtime via `get_payment_provider()`:
 
 ```env
-# Default active provider: "razorpay" or "stripe"
-PAYMENT_PROVIDER=razorpay
+# Default active provider: "dodo" (Primary) or "stripe" (Optional)
+PAYMENT_PROVIDER=dodo
 BILLING_CURRENCY=USD
 ```
 
-* **Factory Function**: `get_payment_provider()` instantiates the configured adapter.
-* **Zero Mutual Dependency**: 
-  - When `PAYMENT_PROVIDER=razorpay`, Stripe credentials are NOT required.
-  - When `PAYMENT_PROVIDER=stripe`, Razorpay credentials are NOT required.
+* **Zero Mutual Dependency**:
+  - When `PAYMENT_PROVIDER=dodo`, Stripe credentials are **NOT** required.
+  - When `PAYMENT_PROVIDER=stripe`, Dodo credentials are **NOT** required.
 
 ---
 
-## 2. Multi-Currency International SaaS Pricing
+## 2. Dodo Payments Official Integration
 
-LeadFlow AI does NOT hard-code currency assumptions in the database.
+LeadFlow AI integrates directly with the official **Dodo Payments Python SDK** (`dodopayments>=1.112.0`) and the **Standard Webhooks** specification (`standardwebhooks>=1.1.0`).
 
+### Authentication & Environments
+- **API Key**: Bearer token authentication (`DODO_PAYMENTS_API_KEY`).
+- **Environments**:
+  - `test_mode` (Sandbox): Uses `https://test.dodopayments.com` with test cards.
+  - `live_mode` (Production): Uses `https://live.dodopayments.com`.
+
+### Products & Server-Side Plan Resolution
+To prevent client-side price tampering, the frontend passes plan names (e.g. `starter` or `growth`), which the backend resolves into trusted server-side Product IDs:
+- **Starter Plan**: `$99 / month` (`DODO_PAYMENTS_PRODUCT_STARTER`)
+- **Growth Plan**: `$199 / month` (`DODO_PAYMENTS_PRODUCT_GROWTH`)
+
+### Multi-Currency International SaaS
 The database stores:
-* `currency` (e.g. `USD`, `EUR`, `GBP`, `INR`, `CAD`, `AUD`)
 * `amount` (e.g. `99.00`, `199.00`)
+* `currency` (`USD`, `EUR`, `GBP`, `INR`, `CAD`, `AUD`)
 * `billing_interval` (`month`, `year`)
-* `provider` (`razorpay` or `stripe`)
+* `provider` (`dodo` or `stripe`)
 * `provider_product_id`
-* `provider_price_id` (or `plan_id`)
 * `provider_customer_id`
 * `provider_subscription_id`
 
-### Standard SaaS Tiers (International Display)
-* **Starter Plan**: **$99 / month** (1,000 AI Messages, 100 Calendar Bookings, Website + WhatsApp)
-* **Growth Plan**: **$199 / month** (2,500 AI Messages, 250 Calendar Bookings, CRM Sync, Revenue Recovery Analytics)
-
 ---
 
-## 3. Normalized Internal Subscription States
+## 3. Subscription Status Normalization
 
-Regardless of whether Razorpay or Stripe is used, LeadFlow AI normalizes external provider events into internal state machines:
+External provider statuses are mapped to LeadFlow internal normalized states:
 
-| Normalized Status | Razorpay Status | Stripe Status | Meaning |
+| Normalized Status | Dodo Payments Status | Stripe Status | Meaning |
 |---|---|---|---|
-| `trialing` | `created` | `trialing` | Free trial or pending initial payment |
-| `active` | `authenticated`, `active` | `active` | Payment successful & subscription in good standing |
-| `past_due` | `pending`, `halted` | `past_due`, `unpaid`, `incomplete` | Renewal charge failed; grace period active |
-| `cancelled` | `cancelled` | `canceled` | Subscription terminated by user or merchant |
-| `expired` | `completed`, `expired` | `incomplete_expired` | Subscription duration concluded |
+| `trialing` | `pending` | `trialing` | Active free trial or pending initial payment |
+| `active` | `active`, `renewed` | `active` | Payment verified & subscription in good standing |
+| `past_due` | `on_hold`, `failed` | `past_due`, `unpaid`, `incomplete` | Renewal failed; grace period active |
+| `cancelled` | `cancelled` | `canceled` | Subscription terminated by customer or merchant |
+| `expired` | `expired` | `incomplete_expired` | Subscription duration concluded |
 | `paused` | `paused` | `paused` | Subscription temporarily held |
 
 ---
 
-## 4. Razorpay Implementation Guide (Primary)
+## 4. Webhook Security & Idempotency
 
-### Environment Variables
-```env
-RAZORPAY_KEY_ID=rzp_live_...
-RAZORPAY_KEY_SECRET=...
-RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
-RAZORPAY_PLAN_STARTER_MONTHLY=plan_starter_99_usd
-RAZORPAY_PLAN_GROWTH_MONTHLY=plan_growth_199_usd
+### Webhook Endpoint
+```text
+POST https://your-api-domain.com/api/v1/webhooks/dodo
 ```
 
-### Razorpay Webhook Configuration
-1. In your **Razorpay Dashboard > Settings > Webhooks**:
-   - **Webhook URL**: `https://your-api-domain.com/api/v1/webhooks/razorpay`
-   - **Secret**: Set your `RAZORPAY_WEBHOOK_SECRET`.
-   - **Active Events**:
-     - `subscription.authenticated`
-     - `subscription.activated`
-     - `subscription.charged`
-     - `subscription.pending`
-     - `subscription.halted`
-     - `subscription.cancelled`
-     - `subscription.completed`
-     - `payment.failed`
+### Signature Verification
+Dodo Payments webhooks use the **Standard Webhooks** specification. Incoming requests verify:
+- `webhook-id`: Unique message ID.
+- `webhook-signature`: HMAC SHA-256 signature.
+- `webhook-timestamp`: Request timestamp (replay attack prevention).
+- Verified using `DODO_PAYMENTS_WEBHOOK_KEY` (format: `whsec_...`).
 
-### Verification & Idempotency
-- Incoming payloads verify HMAC-SHA256 signatures via `X-Razorpay-Signature`.
-- Event IDs are cached to prevent duplicate execution.
+### Idempotency & Database Audit
+All received events are recorded in the `payment_provider_events` table:
+* Columns: `id`, `provider`, `provider_event_id`, `event_type`, `payload_hash`, `status`, `processed_at`, `error`.
+* Unique Constraint: `(provider, provider_event_id)` ensures no payment event is ever processed twice.
+
+### Supported Dodo Webhook Events
+* `payment.succeeded`: Initial payment or renewal succeeded $\rightarrow$ unlocks full plan entitlements.
+* `payment.failed`: Charge failed $\rightarrow$ updates status to `past_due`, records error without deleting customer data.
+* `subscription.active`: Subscription activated $\rightarrow$ updates status to `active`.
+* `subscription.renewed`: Billing cycle renewed $\rightarrow$ resets monthly quota.
+* `subscription.updated` / `subscription.plan_changed`: Plan upgrade/downgrade $\rightarrow$ adjusts limits dynamically.
+* `subscription.cancelled`: Cancellation recorded $\rightarrow$ remains accessible until `cancel_at_next_billing_date`.
+* `subscription.on_hold` / `subscription.failed`: Dunning / payment issue $\rightarrow$ status `past_due`.
+* `subscription.expired`: Subscription terminated $\rightarrow$ restricts usage.
 
 ---
 
-## 5. CRITICAL: Razorpay International Payments Activation
+## 5. Dodo Setup & Credential Instructions
 
-> [!IMPORTANT]
-> **To charge international customers (US, UK, Europe) in USD / EUR / GBP from an Indian Razorpay Account:**
->
-> 1. **Enable International Payments**: Navigate to your **Razorpay Dashboard > Account & Settings > International Payments** and turn the toggle **ON**.
-> 2. **KYC & Business Verification**: Razorpay requires export business verification (IEC or declaration for IT/software services under RBI guidelines).
-> 3. **Supported Cards**: International Visa, MasterCard, and American Express cards are supported once enabled.
-> 4. **Currency Settlement**: Charges are billed in USD ($99 / $199) and settled to your Indian bank account in INR at the applicable daily exchange rate.
-
----
-
-## 6. Stripe Implementation Guide (Modular Secondary)
-
-When ready to use Stripe:
-```env
-PAYMENT_PROVIDER=stripe
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
-- Webhook URL: `https://your-api-domain.com/api/v1/webhooks/stripe`
+1. **Create an Account**: Sign up at [app.dodopayments.com](https://app.dodopayments.com).
+2. **Obtain API Keys**:
+   - In **Developer > API Keys**, generate a Restricted or Full Access key.
+   - For testing: Copy your test key (e.g. `dodo_test_...`).
+   - For live production: Copy your live key (e.g. `dodo_live_...`).
+3. **Create Products in Dodo Dashboard**:
+   - Create a recurring product for **Starter ($99/mo)** $\rightarrow$ Copy Product ID into `DODO_PAYMENTS_PRODUCT_STARTER`.
+   - Create a recurring product for **Growth ($199/mo)** $\rightarrow$ Copy Product ID into `DODO_PAYMENTS_PRODUCT_GROWTH`.
+4. **Configure Webhook**:
+   - In **Developer > Webhooks**, add endpoint:
+     ```text
+     https://your-api-domain.com/api/v1/webhooks/dodo
+     ```
+   - Subscribe to all payment and subscription events.
+   - Copy the Webhook Secret (`whsec_...`) into `DODO_PAYMENTS_WEBHOOK_KEY`.
+5. **Environment Configuration**:
+   ```env
+   PAYMENT_PROVIDER=dodo
+   DODO_PAYMENTS_API_KEY=dodo_test_...
+   DODO_PAYMENTS_WEBHOOK_KEY=whsec_...
+   DODO_PAYMENTS_ENVIRONMENT=test_mode
+   DODO_PAYMENTS_PRODUCT_STARTER=pdt_starter_99_usd
+   DODO_PAYMENTS_PRODUCT_GROWTH=pdt_growth_199_usd
+   TRIAL_PERIOD_DAYS=7
+   ```

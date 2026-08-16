@@ -359,7 +359,7 @@ class AnalyticsSummaryOut(BaseModel):
 
 # --- Billing & Subscription Schemas ---
 class SubscriptionOut(BaseModel):
-    provider: str = "razorpay"
+    provider: str = "dodo"
     plan_tier: str
     status: str  # normalized: trialing, active, past_due, cancelled, expired, paused
     currency: str = "USD"
@@ -370,6 +370,8 @@ class SubscriptionOut(BaseModel):
     leads_count: int
     appointments_count: int
     appointments_limit: int
+    trial_start: Optional[datetime] = None
+    trial_end: Optional[datetime] = None
     current_period_start: Optional[datetime] = None
     current_period_end: Optional[datetime] = None
     cancel_at_period_end: bool = False
@@ -402,6 +404,19 @@ class PortalResponse(BaseModel):
     provider: str
     message: Optional[str] = None
     simulated: bool = False
+
+
+class PaymentProviderEventOut(BaseModel):
+    id: str
+    provider: str
+    provider_event_id: str
+    event_type: str
+    status: str
+    processed_at: datetime
+    created_at: datetime
+    error: Optional[str] = None
+
+    model_config = {"from_attributes": True}
 
 
 # --- Agent Test Console Schemas ---

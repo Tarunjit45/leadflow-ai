@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from apps.api.app.core.database import get_db
 from apps.api.app.core.config import settings
-from apps.api.app.models.models import Business, User, Subscription, AutomationExecution, Integration
+from apps.api.app.models.models import Business, User, Subscription, AutomationExecution, Integration, PaymentProviderEvent
 from apps.api.app.schemas.schemas import SystemStatusOut, ServiceHealth
 
 router = APIRouter(prefix="/admin", tags=["Admin & System Diagnostics"])
@@ -54,52 +54,51 @@ def get_system_status(db: Session = Depends(get_db)):
         )
     )
 
-    # 4. Primary Payment Provider (Razorpay)
-    is_rzp_active = settings.PAYMENT_PROVIDER.lower() == "razorpay"
-    has_rzp = bool(
-        settings.RAZORPAY_KEY_ID
-        and settings.RAZORPAY_KEY_SECRET
-        and not settings.RAZORPAY_KEY_ID.startswith("rzp_test_example")
+    # 4. Primary Payment Provider (Dodo Payments)
+    is_dodo_active = settings.PAYMENT_PROVIDER.lower() == "dodo"
+    has_dodo = bool(
+        settings.DODO_PAYMENTS_API_KEY
+        and not settings.DODO_PAYMENTS_API_KEY.startswith("dodo_test_example")
     )
-    is_rzp_test = bool(settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_ID.startswith("rzp_test"))
+    is_dodo_test = settings.DODO_PAYMENTS_ENVIRONMENT == "test_mode" or (bool(settings.DODO_PAYMENTS_API_KEY) and "test" in settings.DODO_PAYMENTS_API_KEY.lower())
 
-    if is_rzp_active:
-        if has_rzp and not is_rzp_test:
-            rzp_tier = "PRODUCTION CONFIGURED"
-            rzp_status = "healthy"
-            rzp_details = "Razorpay Live Mode Active. Note: For collecting international USD/EUR/GBP, ensure 'International Payments' toggle is approved and active in your Razorpay Dashboard."
-        elif has_rzp and is_rzp_test:
-            rzp_tier = "TEST MODE"
-            rzp_status = "healthy"
-            rzp_details = "Razorpay Test Mode Active. Simulated and sandbox payments enabled."
+    if is_dodo_active:
+        if has_dodo and not is_dodo_test:
+            dodo_tier = "PRODUCTION CONFIGURED"
+            dodo_status = "healthy"
+            dodo_details = "Dodo Payments Live Mode Active. Multi-currency recurring subscriptions enabled globally."
+        elif has_dodo and is_dodo_test:
+            dodo_tier = "TEST MODE"
+            dodo_status = "healthy"
+            dodo_details = "Dodo Payments Sandbox Test Mode Active. Test cards and webhooks supported."
         else:
-            rzp_tier = "IMPLEMENTED (Sandbox Mode)"
-            rzp_status = "not_configured"
-            rzp_details = "Razorpay provider is fully implemented. Running in local test sandbox. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to connect live account."
+            dodo_tier = "CODE IMPLEMENTED (Sandbox Simulated)"
+            dodo_status = "not_configured"
+            dodo_details = "Dodo Payments provider is fully implemented using official dodopayments SDK. Running in local test sandbox. Set DODO_PAYMENTS_API_KEY to connect live account."
 
         services.append(
             ServiceHealth(
-                name=f"Payment Provider (Razorpay - ACTIVE - {rzp_tier})",
-                configured=has_rzp,
-                status=rzp_status,
-                details=rzp_details,
-                required_variables=["PAYMENT_PROVIDER", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"],
-                setup_url="https://dashboard.razorpay.com/app/keys",
+                name=f"Payment Provider (Dodo Payments - PRIMARY - {dodo_tier})",
+                configured=has_dodo,
+                status=dodo_status,
+                details=dodo_details,
+                required_variables=["PAYMENT_PROVIDER", "DODO_PAYMENTS_API_KEY", "DODO_PAYMENTS_WEBHOOK_KEY", "DODO_PAYMENTS_PRODUCT_STARTER", "DODO_PAYMENTS_PRODUCT_GROWTH"],
+                setup_url="https://app.dodopayments.com/developer/api-keys",
             )
         )
     else:
         services.append(
             ServiceHealth(
-                name="Payment Provider (Razorpay)",
-                configured=has_rzp,
-                status="healthy" if has_rzp else "not_configured",
-                details="Razorpay is implemented as an alternate provider. Set PAYMENT_PROVIDER=razorpay to activate.",
-                required_variables=["PAYMENT_PROVIDER", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
-                setup_url="https://dashboard.razorpay.com/app/keys",
+                name="Payment Provider (Dodo Payments)",
+                configured=has_dodo,
+                status="healthy" if has_dodo else "not_configured",
+                details="Dodo Payments is available. Set PAYMENT_PROVIDER=dodo to activate.",
+                required_variables=["PAYMENT_PROVIDER", "DODO_PAYMENTS_API_KEY", "DODO_PAYMENTS_WEBHOOK_KEY"],
+                setup_url="https://app.dodopayments.com/developer/api-keys",
             )
         )
 
-    # 5. Secondary Payment Provider (Stripe)
+    # 5. Secondary Payment Provider (Stripe - Optional)
     is_stripe_active = settings.PAYMENT_PROVIDER.lower() == "stripe"
     has_stripe = bool(
         settings.STRIPE_SECRET_KEY
@@ -108,7 +107,7 @@ def get_system_status(db: Session = Depends(get_db)):
     is_stripe_test = bool(settings.STRIPE_SECRET_KEY and settings.STRIPE_SECRET_KEY.startswith("sk_test"))
 
     if is_stripe_active:
-        stripe_tier = "PRODUCTION CONFIGURED" if (has_stripe and not is_stripe_test) else ("TEST MODE" if has_stripe else "IMPLEMENTED (Sandbox Mode)")
+        stripe_tier = "PRODUCTION CONFIGURED" if (has_stripe and not is_stripe_test) else ("TEST MODE" if has_stripe else "CODE IMPLEMENTED (Sandbox Mode)")
         services.append(
             ServiceHealth(
                 name=f"Payment Provider (Stripe - ACTIVE - {stripe_tier})",
@@ -122,10 +121,10 @@ def get_system_status(db: Session = Depends(get_db)):
     else:
         services.append(
             ServiceHealth(
-                name="Payment Provider (Stripe - Modular Secondary)",
+                name="Payment Provider (Stripe - Optional Secondary)",
                 configured=has_stripe,
                 status="healthy" if has_stripe else "not_configured",
-                details="Stripe is implemented as an optional modular provider. Not required when Razorpay is active.",
+                details="Stripe is retained as an optional modular adapter. Not required when Dodo is active.",
                 required_variables=["PAYMENT_PROVIDER", "STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"],
                 setup_url="https://dashboard.stripe.com/apikeys",
             )
@@ -178,6 +177,7 @@ def get_admin_overview(db: Session = Depends(get_db)):
     users_count = db.query(User).count()
     active_subs = db.query(Subscription).filter(Subscription.status == "active").count()
     total_executions = db.query(AutomationExecution).count()
+    total_payment_events = db.query(PaymentProviderEvent).count()
 
     recent_executions = (
         db.query(AutomationExecution)
@@ -191,6 +191,7 @@ def get_admin_overview(db: Session = Depends(get_db)):
         "users_count": users_count,
         "active_subscriptions": active_subs,
         "total_automation_executions": total_executions,
+        "total_payment_events": total_payment_events,
         "recent_executions": [
             {
                 "id": ex.id,

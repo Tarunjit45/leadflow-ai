@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
-    # Database (PostgreSQL / SQLite fallback)
+    # Database (PostgreSQL in production / SQLite local fallback)
     DATABASE_URL: str = "sqlite:///./leadflow_local.db"
     
     # Redis Queue
@@ -52,18 +52,22 @@ class Settings(BaseSettings):
     META_PHONE_NUMBER_ID: Optional[str] = None
     META_WABA_ID: Optional[str] = None
 
-    # Billing & Payment Provider Abstraction (Default: razorpay)
-    PAYMENT_PROVIDER: str = "razorpay"  # "razorpay" or "stripe"
-    BILLING_CURRENCY: str = "USD"       # Default international display currency (USD, EUR, GBP, INR, etc.)
+    # =========================================================================
+    # PAYMENT PROVIDER ABSTRACTION (Primary: Dodo Payments)
+    # =========================================================================
+    PAYMENT_PROVIDER: str = "dodo"      # "dodo" (Primary default) or "stripe" (optional)
+    BILLING_CURRENCY: str = "USD"       # Default international display currency (USD)
+    TRIAL_PERIOD_DAYS: int = 7          # Configurable trial period in days
+    BILLING_GRACE_PERIOD_DAYS: int = 3  # Grace period for past_due / on_hold status
 
-    # Razorpay Provider Configuration (Primary for India & International SaaS)
-    RAZORPAY_KEY_ID: Optional[str] = None
-    RAZORPAY_KEY_SECRET: Optional[str] = None
-    RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
-    RAZORPAY_PLAN_STARTER_MONTHLY: str = "plan_starter_99_usd"
-    RAZORPAY_PLAN_GROWTH_MONTHLY: str = "plan_growth_199_usd"
+    # Dodo Payments Configuration (Primary for India & International SaaS)
+    DODO_PAYMENTS_API_KEY: Optional[str] = None
+    DODO_PAYMENTS_WEBHOOK_KEY: Optional[str] = None
+    DODO_PAYMENTS_ENVIRONMENT: str = "test_mode"  # "test_mode" or "live_mode"
+    DODO_PAYMENTS_PRODUCT_STARTER: str = "pdt_starter_99_usd"
+    DODO_PAYMENTS_PRODUCT_GROWTH: str = "pdt_growth_199_usd"
 
-    # Stripe Provider Configuration (Modular secondary provider)
+    # Stripe Provider Configuration (Optional modular secondary provider)
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_PUBLISHABLE_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None

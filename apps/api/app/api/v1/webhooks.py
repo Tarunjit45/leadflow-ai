@@ -1,5 +1,6 @@
 import json
 import logging
+import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -8,7 +9,7 @@ from apps.api.app.core.database import get_db
 from apps.api.app.core.idempotency import is_event_processed, mark_event_processed
 from apps.api.app.integrations.whatsapp import WhatsAppProvider
 from apps.api.app.integrations.payments import get_payment_provider
-from apps.api.app.models.models import Business, Conversation, Message, Subscription
+from apps.api.app.models.models import Business, Conversation, Message, Subscription, PaymentProviderEvent
 from apps.api.app.agents.runtime import AgentRuntime
 
 logger = logging.getLogger(__name__)
@@ -131,35 +132,56 @@ async def receive_whatsapp_message(
     return {"status": "processed"}
 
 
-# --- Razorpay Webhooks ---
-@router.post("/razorpay")
-async def receive_razorpay_webhook(
+# --- Dodo Payments Webhooks (Primary) ---
+@router.post("/dodo")
+async def receive_dodo_webhook(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    """Processes Razorpay subscription, payment, and lifecycle webhook events."""
+    """
+    Processes official Dodo Payments webhooks with Standard Webhooks signature verification,
+    idempotent event recording (payment_provider_events table), and entitlement synchronization.
+    """
     raw_body = await request.body()
-    signature = request.headers.get("X-Razorpay-Signature", "")
+    headers = dict(request.headers)
 
-    provider = get_payment_provider("razorpay")
-    if not provider.verify_webhook_signature(raw_body, signature):
-        logger.error("Invalid Razorpay webhook signature")
-        raise HTTPException(status_code=400, detail="Invalid Razorpay webhook signature.")
+    provider = get_payment_provider("dodo")
+    if not provider.verify_webhook_signature(raw_body, headers):
+        logger.error("Invalid Dodo Payments webhook signature.")
+        raise HTTPException(status_code=400, detail="Invalid Dodo Payments webhook signature.")
 
-    event = provider.parse_webhook_event(raw_body, signature)
-    event_id = event.get("event_id")
+    event = provider.parse_webhook_event(raw_body, headers)
+    event_id = str(event.get("event_id"))
     event_type = event.get("event_type")
 
-    if is_event_processed("razorpay", event_id):
-        return {"status": "already_processed"}
-    mark_event_processed("razorpay", event_id)
+    # Idempotency check via payment_provider_events table
+    existing_event = db.query(PaymentProviderEvent).filter(
+        PaymentProviderEvent.provider == "dodo",
+        PaymentProviderEvent.provider_event_id == event_id,
+    ).first()
+
+    if existing_event:
+        logger.info(f"Dodo Payments event {event_id} already processed. Skipping duplicate.")
+        return {"status": "already_processed", "event_id": event_id}
+
+    # Record event in table
+    payload_hash = hashlib.sha256(raw_body).hexdigest()
+    event_record = PaymentProviderEvent(
+        provider="dodo",
+        provider_event_id=event_id,
+        event_type=event_type,
+        payload_hash=payload_hash,
+        status="processed",
+    )
+    db.add(event_record)
+    db.commit()
 
     business_id = event.get("business_id")
     sub_id = event.get("provider_subscription_id")
     norm_status = event.get("normalized_status", "active")
     plan_tier = event.get("plan_tier", "starter")
 
-    # Find subscription by business_id or provider_subscription_id
+    # Find subscription
     sub = None
     if business_id:
         sub = db.query(Subscription).filter(Subscription.business_id == business_id).first()
@@ -169,11 +191,10 @@ async def receive_razorpay_webhook(
         ).first()
 
     if not sub:
-        # Fallback to demo business if available
         sub = db.query(Subscription).first()
 
     if sub:
-        sub.provider = "razorpay"
+        sub.provider = "dodo"
         sub.status = norm_status
         sub.plan_tier = plan_tier
         if sub_id:
@@ -185,15 +206,28 @@ async def receive_razorpay_webhook(
         if event.get("amount"):
             sub.amount = event.get("amount")
 
+        # Entitlement limits based on tier & active status
         is_growth = plan_tier.lower() == "growth"
-        sub.messages_limit = 2500 if is_growth else 1000
-        sub.appointments_limit = 250 if is_growth else 100
+        if norm_status in ["active", "trialing"]:
+            sub.messages_limit = 2500 if is_growth else 1000
+            sub.appointments_limit = 250 if is_growth else 100
+        elif norm_status in ["cancelled", "expired"]:
+            # Restrict limits on expired/cancelled subscriptions
+            sub.messages_limit = 50
+            sub.appointments_limit = 5
+
         db.commit()
 
-    return {"status": "success", "provider": "razorpay", "event": event_type, "normalized_status": norm_status}
+    return {
+        "status": "success",
+        "provider": "dodo",
+        "event_id": event_id,
+        "event_type": event_type,
+        "normalized_status": norm_status,
+    }
 
 
-# --- Stripe Webhooks ---
+# --- Stripe Webhooks (Optional Modular Secondary) ---
 @router.post("/stripe")
 async def receive_stripe_webhook(
     request: Request,
@@ -208,12 +242,27 @@ async def receive_stripe_webhook(
         raise HTTPException(status_code=400, detail="Invalid Stripe webhook signature.")
 
     event = provider.parse_webhook_event(raw_body, sig_header)
-    event_id = event.get("event_id")
+    event_id = str(event.get("event_id"))
     event_type = event.get("event_type")
 
-    if is_event_processed("stripe", event_id):
-        return {"status": "already_processed"}
-    mark_event_processed("stripe", event_id)
+    existing_event = db.query(PaymentProviderEvent).filter(
+        PaymentProviderEvent.provider == "stripe",
+        PaymentProviderEvent.provider_event_id == event_id,
+    ).first()
+
+    if existing_event:
+        return {"status": "already_processed", "event_id": event_id}
+
+    payload_hash = hashlib.sha256(raw_body).hexdigest()
+    event_record = PaymentProviderEvent(
+        provider="stripe",
+        provider_event_id=event_id,
+        event_type=event_type,
+        payload_hash=payload_hash,
+        status="processed",
+    )
+    db.add(event_record)
+    db.commit()
 
     business_id = event.get("business_id")
     sub_id = event.get("provider_subscription_id")

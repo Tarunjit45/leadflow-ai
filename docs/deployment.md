@@ -54,5 +54,5 @@ services:
 - [ ] Execute database migrations / seed script.
 - [ ] Verify `GET /api/v1/admin/status` returns operational health.
 - [ ] Configure Meta WhatsApp Webhook Callback URL and verify handshake.
-- [ ] Configure Stripe Webhook endpoint.
+- [ ] Configure Dodo Payments Webhook endpoint (`/api/v1/webhooks/dodo`) with Webhook Secret.
 - [ ] Test website chat widget embed script.

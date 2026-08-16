@@ -3,7 +3,7 @@ from apps.api.app.integrations.payments.base import (
     SubscriptionCheckoutSession,
     SubscriptionStatusResult,
 )
-from apps.api.app.integrations.payments.razorpay_provider import RazorpayProvider
+from apps.api.app.integrations.payments.dodo_provider import DodoPaymentsProvider
 from apps.api.app.integrations.payments.stripe_provider import StripeProvider
 from apps.api.app.integrations.payments.factory import get_payment_provider
 
@@ -11,7 +11,7 @@ __all__ = [
     "BasePaymentProvider",
     "SubscriptionCheckoutSession",
     "SubscriptionStatusResult",
-    "RazorpayProvider",
+    "DodoPaymentsProvider",
     "StripeProvider",
     "get_payment_provider",
 ]

@@ -11,12 +11,13 @@ import {
   AlertTriangle,
   Info,
   Layers,
+  Clock,
 } from 'lucide-react';
 import { fetchApi } from '../../../lib/api';
 
 export default function BillingPage() {
   const [sub, setSub] = useState<any>({
-    provider: 'razorpay',
+    provider: 'dodo',
     plan_tier: 'growth',
     status: 'active',
     currency: 'USD',
@@ -26,12 +27,15 @@ export default function BillingPage() {
     messages_limit: 2500,
     appointments_count: 19,
     appointments_limit: 250,
+    trial_start: null,
+    trial_end: null,
   });
   const [providerInfo, setProviderInfo] = useState<any>({
-    active_provider: 'razorpay',
+    active_provider: 'dodo',
     configured: false,
-    tier_state: 'IMPLEMENTED (Sandbox Mode)',
+    tier_state: 'CODE IMPLEMENTED (Sandbox Simulated)',
     currency: 'USD',
+    trial_period_days: 7,
   });
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
@@ -90,10 +94,21 @@ export default function BillingPage() {
       if (res?.url && !res.simulated) {
         window.location.href = res.url;
       } else {
-        alert(res?.message || 'Self-service billing management portal opened.');
+        alert(res?.message || 'Dodo Payments Customer Portal opened.');
       }
     } catch {
       alert('Billing management portal opened (Sandbox Mode).');
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirm('Are you sure you want to schedule cancellation at the end of your billing cycle?')) return;
+    try {
+      const res = await fetchApi('/billing/cancel', { method: 'POST' });
+      setSub((prev: any) => ({ ...prev, cancel_at_period_end: true, status: 'cancelled' }));
+      alert(res?.message || 'Subscription scheduled for cancellation at the end of the billing period.');
+    } catch {
+      alert('Subscription cancelled (Sandbox Mode).');
     }
   };
 
@@ -106,7 +121,7 @@ export default function BillingPage() {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Billing, Plans &amp; Usage Limits</h1>
           <p className="text-xs text-slate-400">
-            Modular multi-currency SaaS billing engine powered by {providerInfo.active_provider === 'razorpay' ? 'Razorpay' : 'Stripe'}.
+            Global SaaS recurring billing powered by <strong className="text-white capitalize">{providerInfo.active_provider === 'dodo' ? 'Dodo Payments' : 'Stripe'}</strong>.
           </p>
         </div>
 
@@ -116,7 +131,7 @@ export default function BillingPage() {
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition"
           >
             <CreditCard className="h-3.5 w-3.5" />
-            Manage Invoices
+            Customer Portal
           </button>
         </div>
       </div>
@@ -138,28 +153,23 @@ export default function BillingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-white capitalize">
-                  Active Payment Provider: {providerInfo.active_provider}
+                  Payment Engine: {providerInfo.active_provider === 'dodo' ? 'Dodo Payments (Primary)' : 'Stripe'}
                 </h2>
                 <span className="rounded-full bg-sky-500/20 px-2.5 py-0.5 text-[10px] font-bold text-sky-300 border border-sky-500/30 uppercase">
                   {providerInfo.tier_state}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                Multi-currency billing enabled ({providerInfo.currency || 'USD'}, EUR, GBP, INR, CAD, AUD).
+                Multi-currency international SaaS billing enabled ({providerInfo.currency || 'USD'}, EUR, GBP, INR, CAD, AUD).
               </p>
             </div>
           </div>
-        </div>
 
-        {providerInfo.international_payments_note && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-start gap-2.5 text-xs text-amber-200">
-            <Info className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold">International Payments Activation Notice: </span>
-              <span>{providerInfo.international_payments_note}</span>
-            </div>
+          <div className="flex items-center gap-2 rounded-xl bg-slate-950/70 px-3 py-1.5 border border-slate-800 text-xs text-slate-300">
+            <Clock className="h-4 w-4 text-sky-400" />
+            <span>Trial Period: {providerInfo.trial_period_days || 7} Days Free</span>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Usage Counters */}
@@ -172,6 +182,11 @@ export default function BillingPage() {
               <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/30 capitalize">
                 {sub.status}
               </span>
+              {sub.cancel_at_period_end && (
+                <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold text-rose-300 border border-rose-500/30">
+                  Cancels at period end
+                </span>
+              )}
             </div>
           </div>
           <div className="text-right">
@@ -283,6 +298,17 @@ export default function BillingPage() {
             {sub.plan_tier === 'growth' ? 'Active Plan' : 'Upgrade to Growth ($199/mo)'}
           </button>
         </div>
+      </div>
+
+      {/* Cancellation Option */}
+      <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-800">
+        <span>Need to pause or cancel your subscription?</span>
+        <button
+          onClick={handleCancel}
+          className="text-rose-400 hover:text-rose-300 underline font-medium"
+        >
+          Cancel subscription
+        </button>
       </div>
     </div>
   );

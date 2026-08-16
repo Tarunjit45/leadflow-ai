@@ -12,7 +12,8 @@ from sqlalchemy import (
     ForeignKey,
     JSON,
     Enum,
-    Index
+    Index,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from apps.api.app.core.database import Base
@@ -294,7 +295,7 @@ class Subscription(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     business_id = Column(String(36), ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-    provider = Column(String(50), default="razorpay")  # razorpay or stripe
+    provider = Column(String(50), default="dodo")  # dodo or stripe
     
     # Generic provider IDs
     provider_customer_id = Column(String(255), nullable=True)
@@ -314,6 +315,8 @@ class Subscription(Base):
 
     plan_tier = Column(String(50), default="trial")   # trial, starter, growth, enterprise
     status = Column(String(50), default="trialing")   # normalized: trialing, active, past_due, cancelled, expired, paused
+    trial_start = Column(DateTime, nullable=True)
+    trial_end = Column(DateTime, nullable=True)
     current_period_start = Column(DateTime, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
     cancel_at_period_end = Column(Boolean, default=False)
@@ -333,17 +336,30 @@ class Subscription(Base):
     business = relationship("Business", back_populates="subscription")
 
 
+class PaymentProviderEvent(Base):
+    __tablename__ = "payment_provider_events"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_event_id", name="uq_payment_provider_event"),
+    )
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    provider = Column(String(50), nullable=False, index=True)
+    provider_event_id = Column(String(255), nullable=False, index=True)
+    event_type = Column(String(100), nullable=False)
+    payload_hash = Column(String(64), nullable=True)
+    status = Column(String(50), default="processed")  # processed, failed, ignored
+    processed_at = Column(DateTime, default=get_utc_now)
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=get_utc_now)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     business_id = Column(String(36), ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(String(36), nullable=True)
-    agent_id = Column(String(36), nullable=True)
-    action = Column(String(100), nullable=False)      # agent_modified, lead_status_updated, takeover_initiated, etc.
-    resource = Column(String(100), nullable=False)    # agent, lead, appointment, integration, conversation
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action = Column(String(100), nullable=False)
+    resource_type = Column(String(100), nullable=False)
     resource_id = Column(String(255), nullable=True)
-    metadata_info = Column(JSON, default=dict)
-    created_at = Column(DateTime, default=get_utc_now)
-
     business = relationship("Business", back_populates="audit_logs")

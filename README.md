@@ -2,7 +2,7 @@
 
 > **Turn every inbound enquiry into a confirmed customer.**
 
-LeadFlow AI is a production-oriented SaaS designed for home-service businesses (HVAC, plumbing, electrical, roofing, contracting) to automatically respond to inbound customer inquiries, qualify customer intent, schedule verified calendar appointments, and execute intelligent follow-ups across Web and WhatsApp 24/7.
+LeadFlow AI is an enterprise-grade SaaS designed for home-service contractors (HVAC, plumbing, electrical, roofing, contracting) to automatically respond to inbound customer inquiries, qualify customer intent, schedule verified calendar appointments, and execute intelligent follow-ups across Web and WhatsApp 24/7.
 
 ---
 
@@ -14,7 +14,7 @@ LeadFlow AI is a production-oriented SaaS designed for home-service businesses (
 - 🔁 **Scheduled Follow-Up Engine**: Multi-stage automated re-engagement (+24h, +72h, +7d) with automatic stop conditions (customer replies, books, or opts out) and quiet hours protection.
 - 🧑‍💼 **1-Click Human Takeover**: Live conversation inbox with real-time agent handoff and takeover resuming.
 - 📊 **Revenue Recovery Analytics**: Dynamic ROI calculation estimating recovered revenue from missed after-hours leads.
-- 💳 **Stripe Subscription Billing**: Modular subscription tiers (Trial, Starter $99/mo, Growth $199/mo) with usage limit enforcement and customer portal.
+- 💳 **Dodo Payments Integration (Primary)**: Modular multi-currency recurring subscription engine with Dodo Payments (Starter $99/mo, Growth $199/mo), Standard Webhooks signature verification, customer self-service portal, and 7-day free trial lifecycle.
 - 🛡️ **Anti-Prompt-Injection & Security**: Structural prompt protection, automated secret redaction, AES-256 encrypted credentials, and multi-tenant database isolation.
 
 ---
@@ -32,17 +32,17 @@ leadflow-ai/
 │   │
 │   └── api/                     # FastAPI Backend Engine (Python 3.12)
 │       ├── app/
-│       │   ├── api/v1/          # Clean REST endpoints (Auth, Leads, Agent, Calendar, Webhooks)
+│       │   ├── api/v1/          # REST endpoints (Auth, Leads, Agent, Calendar, Billing, Webhooks)
 │       │   ├── core/            # Config, Security, AES encryption, Idempotency, Database
-│       │   ├── models/          # Multi-tenant SQLAlchemy models
+│       │   ├── models/          # Multi-tenant SQLAlchemy models & PaymentProviderEvent
 │       │   ├── schemas/         # Pydantic v2 validation & serialization
 │       │   ├── agents/          # AI provider abstraction, prompt builder, safety filters, tool registry
-│       │   ├── integrations/    # WhatsApp Cloud API, Google Calendar, Google Sheets, Stripe
+│       │   ├── integrations/    # Dodo Payments, Stripe, WhatsApp Cloud API, Google Calendar, Sheets
 │       │   └── workers/         # Background follow-up engine and scheduler
-│       └── tests/               # Pytest unit & integration test suite
+│       └── tests/               # Pytest unit & integration test suite (20/20 passing)
 │
 ├── database/                    # Database seeds & migrations
-├── docs/                        # Architecture, setup, security, and deployment guides
+├── docs/                        # Architecture, setup, security, billing, and deployment guides
 ├── docker-compose.yml           # PostgreSQL 16 & Redis 7 local services
 ├── .env.example                 # Environment configuration template
 └── README.md
@@ -106,9 +106,9 @@ python -m pytest apps/api/tests -v
 - [Architecture & Design](docs/architecture.md)
 - [Local Setup Guide](docs/setup.md)
 - [Environment Variables Reference](docs/environment.md)
+- [Dodo Payments & Billing Guide](docs/billing.md)
 - [Integrations Guide](docs/integrations.md)
 - [Meta WhatsApp Cloud API Setup](docs/whatsapp.md)
-- [Stripe Billing & Subscriptions](docs/billing.md)
 - [Security & Anti-Prompt-Injection](docs/security.md)
 - [Production Deployment](docs/deployment.md)
 - [Troubleshooting & FAQ](docs/troubleshooting.md)
