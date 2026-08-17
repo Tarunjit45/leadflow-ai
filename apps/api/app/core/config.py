@@ -28,9 +28,8 @@ class Settings(BaseSettings):
 
     # Database (PostgreSQL in production / SQLite local fallback)
     DATABASE_URL: str = (
-        "sqlite:////tmp/leadflow_local.db"
-        if os.getenv("VERCEL")
-        else "sqlite:///./leadflow_local.db"
+        os.getenv("DATABASE_URL")
+        or ("sqlite:////tmp/leadflow_local.db" if os.getenv("VERCEL") else "sqlite:///./leadflow_local.db")
     )
     
     # Redis Queue
