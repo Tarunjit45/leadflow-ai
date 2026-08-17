@@ -11,13 +11,28 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     LOG_LEVEL: str = "INFO"
 
-    # App & CORS
-    APP_URL: str = "http://localhost:3000"
+    # App & API Base URLs (Easily changed by setting APP_URL / API_URL when you buy a domain)
+    APP_URL: str = (
+        os.getenv("APP_URL")
+        or os.getenv("NEXT_PUBLIC_APP_URL")
+        or "http://localhost:3000"
+    )
+    API_URL: str = (
+        os.getenv("API_URL")
+        or os.getenv("NEXT_PUBLIC_API_URL")
+        or "http://localhost:8000"
+    )
+
+    # Dynamic CORS Origins (Permits local, cloud deployments, and custom domain automatically)
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "https://*.vercel.app",
+        "https://*.onrender.com",
+        "https://*.up.railway.app",
+        "*"
     ]
 
     # Security & JWT
@@ -42,10 +57,13 @@ class Settings(BaseSettings):
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     AI_FALLBACK_MODEL: str = "anthropic/claude-3.5-haiku"
 
-    # Google Integrations (OAuth & Calendar & Sheets)
+    # Google Integrations (OAuth & Calendar & Sheets - Automatically derived from API_URL)
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/integrations/google/callback"
+    GOOGLE_REDIRECT_URI: str = (
+        os.getenv("GOOGLE_REDIRECT_URI")
+        or f"{os.getenv('API_URL', 'http://localhost:8000').rstrip('/')}/api/v1/integrations/google/callback"
+    )
 
     # Meta WhatsApp Cloud API
     META_APP_ID: Optional[str] = None

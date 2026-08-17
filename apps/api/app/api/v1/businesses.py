@@ -68,3 +68,64 @@ def complete_onboarding(
     db.commit()
     db.refresh(business)
     return BusinessOut.model_validate(business)
+
+
+@router.post("/toggle-automation")
+def toggle_automation(
+    business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db),
+):
+    """Toggle agent status between active and paused."""
+    agent = db.query(Agent).filter(Agent.business_id == business.id).first()
+    if not agent:
+        agent = Agent(business_id=business.id, status="active")
+        db.add(agent)
+        db.commit()
+        db.refresh(agent)
+
+    new_status = "paused" if agent.status == "active" else "active"
+    agent.status = new_status
+    db.commit()
+    db.refresh(agent)
+
+    return {
+        "status": agent.status,
+        "is_active": agent.status == "active",
+        "message": "AI Employee is working" if agent.status == "active" else "AI Employee is paused",
+    }
+
+
+@router.get("/setup-progress")
+def get_setup_progress(
+    business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db),
+):
+    """Calculates non-technical setup milestone progress for business owners."""
+    knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business.id).first()
+    agent = db.query(Agent).filter(Agent.business_id == business.id).first()
+
+    has_business_info = bool(business.name and len(business.name.strip()) > 0)
+    has_services = bool(knowledge and knowledge.services and len(knowledge.services) > 0)
+    has_agent = bool(agent and agent.name and len(agent.name.strip()) > 0)
+    has_hours = bool(knowledge and knowledge.hours and len(knowledge.hours) > 0)
+    is_active = bool(agent and agent.status == "active")
+
+    steps = [
+        {"id": "business", "label": "Business Details", "completed": has_business_info},
+        {"id": "services", "label": "Services & Prices", "completed": has_services},
+        {"id": "agent", "label": "AI Employee Setup", "completed": has_agent},
+        {"id": "hours", "label": "Business Hours", "completed": has_hours},
+        {"id": "automation", "label": "Automation Active", "completed": is_active},
+    ]
+
+    completed_count = sum(1 for s in steps if s["completed"])
+    total_count = len(steps)
+
+    return {
+        "completed_count": completed_count,
+        "total_count": total_count,
+        "percentage": round((completed_count / total_count) * 100),
+        "steps": steps,
+        "is_ready": completed_count >= 4,
+    }
+

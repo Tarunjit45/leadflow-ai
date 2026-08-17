@@ -59,13 +59,19 @@ class AgentRuntime:
                 "escalated": True,
             }
 
-        agent = self.db.query(Agent).filter(
-            Agent.business_id == business_id,
-            Agent.status.in_(["active", "testing"])
-        ).first()
+        # Check if the business agent exists and is paused
+        agent = self.db.query(Agent).filter(Agent.business_id == business_id).first()
+        if agent and agent.status == "paused":
+            logger.info(f"AI Agent for business {business_id} is PAUSED by master switch. AI will not auto-respond.")
+            return {
+                "response_text": None,
+                "status": "paused",
+                "tool_calls": [],
+                "escalated": False,
+            }
 
         if not agent:
-            # Create a default agent if none exists
+            # Create a default active agent if none exists yet
             agent = Agent(
                 business_id=business_id,
                 name="LeadFlow Sales Assistant",

@@ -18,7 +18,7 @@ engine_kwargs: Dict[str, Any] = {
 }
 
 if db_url.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+    connect_args = {"check_same_thread": False, "timeout": 30}
     engine_kwargs["connect_args"] = connect_args
 else:
     # PostgreSQL production pooling settings

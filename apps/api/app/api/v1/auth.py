@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from apps.api.app.core.database import get_db
 from apps.api.app.core.security import verify_password, get_password_hash, create_access_token
 from apps.api.app.models.models import User, Business, BusinessMember, BusinessKnowledge, Agent, Subscription
-from apps.api.app.schemas.schemas import UserCreate, UserLogin, UserOut, Token
+from apps.api.app.schemas.schemas import UserCreate, UserLogin, UserOut, Token, UserPasswordUpdate, UserProfileUpdate
 from apps.api.app.api.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -144,3 +144,53 @@ def demo_login(db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return UserOut.model_validate(current_user)
+
+
+@router.patch("/profile", response_model=UserOut)
+def update_profile(
+    payload: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.name is not None:
+        current_user.name = payload.name
+    if payload.email is not None and payload.email != current_user.email:
+        existing = db.query(User).filter(User.email == payload.email).first()
+        if existing and existing.id != current_user.id:
+            raise HTTPException(status_code=400, detail="This email is already in use.")
+        current_user.email = payload.email
+
+    db.commit()
+    db.refresh(current_user)
+    return UserOut.model_validate(current_user)
+
+
+@router.patch("/password")
+def update_password(
+    payload: UserPasswordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.hashed_password and not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password does not match.")
+
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    db.commit()
+    return {"status": "success", "message": "Password updated successfully."}
+
+
+@router.delete("/account")
+def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Find businesses where user is owner and delete them
+    memberships = db.query(BusinessMember).filter(BusinessMember.user_id == current_user.id).all()
+    for m in memberships:
+        if m.role == "owner":
+            biz = db.query(Business).filter(Business.id == m.business_id).first()
+            if biz:
+                db.delete(biz)
+    db.delete(current_user)
+    db.commit()
+    return {"status": "success", "message": "Account and workspace deleted permanently."}

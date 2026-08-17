@@ -1,6 +1,18 @@
-// Frontend API client with JWT header injection and local fallback support
+// Frontend API client with dynamic domain resolution, JWT header injection and fallback support
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    // If running on custom domain or cloud host on standard ports (e.g. 443 / 80)
+    if (window.location.port === '3000') {
+      return 'http://localhost:8000';
+    }
+    return window.location.origin;
+  }
+  return 'http://localhost:8000';
+}
 
 function getAuthHeader(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -9,7 +21,8 @@ function getAuthHeader(): Record<string, string> {
 }
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
-  const url = `${API_BASE}/api/v1${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const base = getApiBaseUrl();
+  const url = `${base}/api/v1${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const headers = {
     'Content-Type': 'application/json',
     ...getAuthHeader(),
