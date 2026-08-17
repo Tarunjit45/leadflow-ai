@@ -4,62 +4,68 @@
 
 @layer base {
   :root {
-    --background: 222 47% 5%;
+    --background: 224 71% 4%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 7%;
-    --card-foreground: 210 40% 98%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --border: 217 33% 15%;
-    --radius: 0.75rem;
   }
 }
 
 body {
-  background-color: #080b11;
-  color: #f1f5f9;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #05070c;
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  letter-spacing: -0.01em;
 }
 
-/* Subtle background ambient depth */
-.bg-ambient {
+/* Ambient Radial Mesh Depth */
+.bg-ambient-pitch {
   background-image: 
-    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.05) 0%, transparent 60%),
-    radial-gradient(circle at 100% 100%, rgba(30, 58, 138, 0.03) 0%, transparent 50%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.09) 0%, transparent 70%),
+    radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 0% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 50%);
 }
 
-/* Reusable Interactive Components & Tokens */
 @layer components {
-  /* Premium Primary Button with Physical Lift */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-500 active:bg-blue-700 shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none disabled:hover:translate-y-0 select-none;
+  /* Ultra-Premium Glass Card */
+  .pitch-card {
+    @apply rounded-3xl bg-[#0a0e17]/90 border border-white/[0.08] backdrop-blur-xl shadow-pitch-card transition-all duration-200;
   }
 
-  /* Secondary Neutral Button */
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium text-sm text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 active:bg-slate-950 transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none select-none;
+  .pitch-card-interactive {
+    @apply rounded-2xl bg-[#0b101a] border border-white/[0.08] hover:border-blue-500/50 hover:bg-[#101624] transition-all duration-200 cursor-pointer shadow-sm hover:shadow-pitch-glow-blue hover:-translate-y-0.5;
   }
 
-  /* Ghost Button */
-  .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl font-medium text-sm text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors duration-150 select-none;
+  /* High-Contrast Interactive Buttons */
+  .btn-pitch-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-500 active:bg-blue-700 shadow-lg shadow-blue-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:pointer-events-none select-none;
   }
 
-  /* Premium Form Input Control */
-  .input-field {
-    @apply w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-150;
+  .btn-pitch-emerald {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 shadow-lg shadow-emerald-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:pointer-events-none select-none;
   }
 
-  /* Standard Card Container */
-  .card-container {
-    @apply rounded-2xl bg-[#0e131f] border border-slate-800/80 shadow-premium;
+  .btn-pitch-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-sm text-slate-200 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-white/[0.2] transition-all duration-150 select-none;
+  }
+
+  .btn-pitch-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors duration-150 select-none;
+  }
+
+  /* Pitch-Dark Input Fields */
+  .input-pitch {
+    @apply w-full px-4 py-3 rounded-2xl bg-[#070a10] border border-white/[0.1] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 transition-all duration-200;
+  }
+
+  /* Live Pulse Indicator Badge */
+  .live-status-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-400;
   }
 }
 
-/* Chat Typing Animation */
+/* Chat & Live Typing Animation */
 .typing-dot {
   animation: typingBounce 1.4s infinite ease-in-out both;
 }
@@ -67,14 +73,14 @@ body {
 .typing-dot:nth-child(2) { animation-delay: -0.16s; }
 
 @keyframes typingBounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+  40% { transform: scale(1.1); opacity: 1; }
 }
 
-/* Custom Scrollbars */
+/* Custom Sleek Scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -84,18 +90,5 @@ body {
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
-}
-
-/* Accessibility: Reduced Motion Support */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-    transform: none !important;
-  }
+  background: #3b82f6;
 }

@@ -77,36 +77,33 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b11] text-slate-100 flex flex-col justify-between selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-[#05070c] bg-ambient-pitch text-slate-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white font-sans">
       {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-950/40 px-6 py-4">
+      <header className="border-b border-white/[0.08] bg-[#05070c]/80 backdrop-blur-xl px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-600/30 transition-transform duration-200 group-hover:scale-105">
               <Bot className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">LeadFlow<span className="text-blue-500">.ai</span></span>
+            <span className="text-xl font-black tracking-tight text-white">LeadFlow<span className="text-blue-400 font-mono">.ai</span></span>
           </Link>
-          <div className="text-sm text-slate-400">
+          <div className="text-xs text-slate-400">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-blue-400 font-semibold hover:text-blue-300 transition-colors">
-              Create workspace
+            <Link href="/signup" className="text-blue-400 font-bold hover:text-blue-300 transition-colors">
+              Create workspace &rarr;
             </Link>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 animate-fade-in">
-        <div className="max-w-md w-full bg-[#0e131f] border border-slate-800/80 rounded-3xl p-6 sm:p-10 shadow-premium">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 animate-fade-in my-8">
+        <div className="w-full max-w-md pitch-card p-6 sm:p-8 space-y-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-500" />
           
-          <div className="mb-6">
-            <h1 className="text-2xl font-extrabold tracking-tight text-white">
-              Welcome back
-            </h1>
-            <p className="text-slate-400 text-xs mt-1.5">
-              Sign in to manage your real business AI employee &amp; customer leads.
-            </p>
+          <div className="text-center space-y-1.5">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Welcome back</h1>
+            <p className="text-xs text-slate-400">Sign in to manage your 24/7 AI employee &amp; incoming leads</p>
           </div>
 
           {errorMessage && (

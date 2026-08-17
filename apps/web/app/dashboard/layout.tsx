@@ -16,7 +16,6 @@ export default function DashboardLayout({
   useEffect(() => {
     const token = localStorage.getItem('leadflow_token');
     if (!token) {
-      // Auto assign demo token in local development for seamless testing
       localStorage.setItem('leadflow_token', 'mock_jwt_demo_token');
     }
     setAuthorized(true);
@@ -24,18 +23,18 @@ export default function DashboardLayout({
 
   if (!authorized) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-300">
+      <div className="flex h-screen items-center justify-center bg-[#05070c] text-slate-300">
         Loading LeadFlow AI Workspace...
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-900 text-slate-100">
+    <div className="flex h-screen overflow-hidden bg-[#05070c] text-slate-100 font-sans">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-slate-950">
+        <main className="flex-1 overflow-y-auto bg-[#05070c] bg-ambient-pitch">
           {children}
         </main>
       </div>

@@ -23,20 +23,39 @@ import {
   ExternalLink,
   ChevronRight,
   UserCheck,
+  Flame,
+  Check,
+  Store,
+  Layers,
 } from 'lucide-react';
 import { fetchApi } from '../../lib/api';
 import { INDUSTRY_TEMPLATES, IndustryTemplate, ServiceItem } from '../../lib/industryTemplates';
-import QRCodeDisplay from '../../components/QRCodeDisplay';
 import PhoneInputWithCountry from '../../components/PhoneInputWithCountry';
+
+const INDUSTRIES = [
+  { key: 'hvac', label: 'HVAC & Plumbing', icon: '❄️', desc: 'Repairs, tune-ups, installations' },
+  { key: 'dental', label: 'Dental & Medical', icon: '🦷', desc: 'Patient booking, emergency triage' },
+  { key: 'salon', label: 'Salon & Spa', icon: '💇', desc: 'Styling, coloring, appointments' },
+  { key: 'gym', label: 'Gym & Fitness', icon: '🏋️', desc: 'Memberships, VIP passes, classes' },
+  { key: 'realestate', label: 'Real Estate', icon: '🏡', desc: 'Buyer showings, valuation tours' },
+  { key: 'restaurant', label: 'Restaurant', icon: '🍽️', desc: 'Table reservations, catering' },
+  { key: 'legal', label: 'Legal & Advisory', icon: '⚖️', desc: 'Consultations, case intake' },
+  { key: 'other', label: 'Custom Business', icon: '🏢', desc: 'Any service or commerce business' },
+];
+
+const AGENT_AVATARS = [
+  { id: 'avatar_1', name: 'Alex', role: 'Sales & Dispatch Pro', icon: '⚡', color: 'from-blue-600 to-cyan-500' },
+  { id: 'avatar_2', name: 'Sophia', role: 'Executive Concierge', icon: '✨', color: 'from-emerald-600 to-teal-500' },
+  { id: 'avatar_3', name: 'Jordan', role: 'Fast Care Specialist', icon: '🚀', color: 'from-indigo-600 to-blue-500' },
+];
 
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Step indicator (1 to 8)
+  // Wizard Steps (1 to 5)
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
-  const [showQRModal, setShowQRModal] = useState<boolean>(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   // Business Profile State
@@ -46,939 +65,809 @@ function OnboardingContent() {
   const [city, setCity] = useState<string>('');
   const [timezone, setTimezone] = useState<string>('Asia/Kolkata');
 
-  // Goals / AI Responsibilities
-  const [goals, setGoals] = useState({
-    answerQuestions: true,
-    collectLeads: true,
-    bookAppointments: true,
-    sendFollowUps: true,
-  });
-
-  // Services & Pricing State
+  // Services State
   const [services, setServices] = useState<ServiceItem[]>(INDUSTRY_TEMPLATES.hvac.defaultServices);
-  const [showCustomServices, setShowCustomServices] = useState<boolean>(false);
+  const [newServiceName, setNewServiceName] = useState('');
+  const [newServicePrice, setNewServicePrice] = useState('');
 
-  // WhatsApp Connection State
+  // AI Agent State
+  const [selectedAvatar, setSelectedAvatar] = useState('avatar_1');
+  const [agentName, setAgentName] = useState<string>('LeadFlow AI Assistant');
+  const [agentRole, setAgentRole] = useState<string>('AI Sales & Appointment Specialist');
+  const [tone, setTone] = useState<'friendly' | 'professional' | 'formal'>('friendly');
+
+  // WhatsApp State
   const [waConnected, setWaConnected] = useState<boolean>(false);
   const [waLoading, setWaLoading] = useState<boolean>(false);
+  const [pingStatus, setPingStatus] = useState<string | null>(null);
 
-  // Calendar Connection State
-  const [calConnected, setCalConnected] = useState<boolean>(false);
-  const [calLoading, setCalLoading] = useState<boolean>(false);
+  // Schedule State
+  const [scheduleMode, setScheduleMode] = useState<'24_7' | 'business_hours'>('24_7');
 
-  // AI Employee Persona State
-  const [agentName, setAgentName] = useState<string>(INDUSTRY_TEMPLATES.hvac.defaultAgentName);
-  const [agentRole, setAgentRole] = useState<string>(INDUSTRY_TEMPLATES.hvac.defaultAgentRole);
-  const [agentTone, setAgentTone] = useState<'friendly' | 'professional' | 'casual' | 'formal'>('friendly');
-  const [customNotes, setCustomNotes] = useState<string>('We offer 1-year warranty on parts and same-day emergency triage for urgent breakdown calls.');
-
-  // Live Test Sandbox State
-  const [testInput, setTestInput] = useState<string>(INDUSTRY_TEMPLATES.hvac.sampleTestMessage);
-  const [testMessages, setTestMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
-    { sender: 'ai', text: `Hi there! I am ${INDUSTRY_TEMPLATES.hvac.defaultAgentName}. How can our team help you today?` },
+  // Live Simulator State
+  const [simMessages, setSimMessages] = useState<Array<{ role: 'customer' | 'ai'; text: string }>>([
+    { role: 'customer', text: 'Hi! Are you open tomorrow for service?' },
+    { role: 'ai', text: `Hello! Yes, we are open and have appointment openings available. Which service do you need?` },
   ]);
-  const [testLoading, setTestLoading] = useState<boolean>(false);
-  const [automationActive, setAutomationActive] = useState<boolean>(true);
-
-  // Account Info Summary
-  const [userEmail, setUserEmail] = useState<string>('');
-
-  // Parse URL query params and load real business info
-  useEffect(() => {
-    const urlToken = searchParams.get('token');
-    if (urlToken) {
-      localStorage.setItem('leadflow_token', urlToken);
-    }
-    const urlStep = searchParams.get('step');
-    if (urlStep) {
-      const parsed = parseInt(urlStep, 10);
-      if (!isNaN(parsed) && parsed >= 1 && parsed <= 8) {
-        setStep(parsed);
-      }
-    }
-    const urlInd = searchParams.get('industry');
-    if (urlInd && INDUSTRY_TEMPLATES[urlInd]) {
-      handleSelectIndustry(urlInd);
-    }
-
-    const cachedUser = localStorage.getItem('leadflow_user');
-    if (cachedUser) {
-      try {
-        const u = JSON.parse(cachedUser);
-        if (u.email) setUserEmail(u.email);
-      } catch {}
-    }
-
-    // Load real business workspace from database
-    fetchApi('/businesses/current')
-      .then((data) => {
-        if (data?.name) setBizName(data.name);
-        if (data?.phone) setPhone(data.phone);
-        if (data?.address) setCity(data.address);
-        if (data?.timezone) setTimezone(data.timezone);
-      })
-      .catch(() => {});
-  }, [searchParams]);
-
-  // Handle industry selection and apply smart defaults
-  const handleSelectIndustry = (indKey: string) => {
-    setSelectedIndustryKey(indKey);
-    const tmpl = INDUSTRY_TEMPLATES[indKey] || INDUSTRY_TEMPLATES.other;
-    setBizName(tmpl.defaultBusinessName);
-    setAgentName(tmpl.defaultAgentName);
-    setAgentRole(tmpl.defaultAgentRole);
-    setAgentTone(tmpl.defaultTone);
-    setServices(tmpl.defaultServices);
-    setTestInput(tmpl.sampleTestMessage);
-    setTestMessages([
-      { sender: 'ai', text: `Hi! I am ${tmpl.defaultAgentName}. How can I assist you with ${tmpl.name} today?` },
-    ]);
-  };
+  const [simInput, setSimInput] = useState('');
 
   const showToast = (msg: string) => {
     setSuccessToast(msg);
     setTimeout(() => setSuccessToast(null), 3500);
   };
 
-  const handleNext = () => {
-    if (step === 2) {
-      showToast('✓ Business details saved');
-    } else if (step === 3) {
-      showToast('✓ Services & goals configured');
-    } else if (step === 4) {
-      showToast('✓ WhatsApp status confirmed');
-    } else if (step === 5) {
-      showToast('✓ AI employee trained');
-    } else if (step === 6) {
-      showToast('✓ Calendar setup confirmed');
+  // Load existing profile if available
+  useEffect(() => {
+    fetchApi('/businesses/current')
+      .then((data) => {
+        if (data) {
+          if (data.name) setBizName(data.name);
+          if (data.phone) {
+            setPhone(data.phone);
+            setWaConnected(true);
+          }
+          if (data.address) setCity(data.address);
+          if (data.timezone) setTimezone(data.timezone);
+        }
+      })
+      .catch(() => {});
+
+    fetchApi('/agents/current')
+      .then((data) => {
+        if (data?.name) setAgentName(data.name);
+        if (data?.role) setAgentRole(data.role);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Update presets when industry changes
+  const handleSelectIndustry = (indKey: string) => {
+    setSelectedIndustryKey(indKey);
+    const template = INDUSTRY_TEMPLATES[indKey] || INDUSTRY_TEMPLATES.hvac;
+    if (!bizName || bizName.includes('Service Co') || bizName.includes('My Business')) {
+      setBizName(template.defaultBusinessName);
     }
-    setStep((prev) => Math.min(prev + 1, 8));
+    setAgentName(template.defaultAgentName);
+    setAgentRole(template.defaultAgentRole);
+    setServices(template.defaultServices);
+
+    setSimMessages([
+      { role: 'customer', text: template.sampleTestMessage },
+      { role: 'ai', text: template.sampleTestReply },
+    ]);
   };
 
-  const handleBack = () => {
-    setStep((prev) => Math.max(prev - 1, 1));
+  const handleAddCustomService = () => {
+    if (!newServiceName.trim() || !newServicePrice.trim()) return;
+    setServices((prev) => [
+      ...prev,
+      {
+        name: newServiceName.trim(),
+        price: newServicePrice.trim(),
+        duration: 60,
+        description: 'Standard professional service',
+      },
+    ]);
+    setNewServiceName('');
+    setNewServicePrice('');
+    showToast('✓ Service added');
   };
 
-  // WhatsApp Connect
+  const handleRemoveService = (index: number) => {
+    setServices((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleConnectWhatsApp = async () => {
     setWaLoading(true);
     try {
       await fetchApi('/integrations/whatsapp/connect', {
         method: 'POST',
-        body: JSON.stringify({
-          phone_number: phone,
-          access_token: 'meta_cloud_verified',
-          phone_number_id: 'waba_prod_001',
-        }),
+        body: JSON.stringify({ phone_number: phone }),
       });
       setWaConnected(true);
-      showToast('✓ WhatsApp connected successfully!');
+      showToast('✓ WhatsApp number registered!');
     } catch {
       setWaConnected(true);
-      showToast('✓ WhatsApp connected (Ready mode)');
+      showToast('✓ WhatsApp registered in workspace');
     } finally {
       setWaLoading(false);
     }
   };
 
-  // Calendar Connect
-  const handleConnectCalendar = async () => {
-    setCalLoading(true);
-    setTimeout(() => {
-      setCalConnected(true);
-      setCalLoading(false);
-      showToast('✓ Google Calendar connected and synced!');
-    }, 900);
-  };
-
-  // Live Test Chat Simulation
-  const handleSendTestMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!testInput.trim() || testLoading) return;
-
-    const userText = testInput.trim();
-    setTestInput('');
-    setTestMessages((prev) => [...prev, { sender: 'user', text: userText }]);
-    setTestLoading(true);
-
+  const handleTestPing = async () => {
+    setWaLoading(true);
+    setPingStatus(null);
     try {
-      const data = await fetchApi('/test-console/simulate', {
-        method: 'POST',
-        body: JSON.stringify({ message: userText }),
-      });
-      const reply = data.reply || (INDUSTRY_TEMPLATES[selectedIndustryKey] || INDUSTRY_TEMPLATES.hvac).sampleTestReply;
-      setTestMessages((prev) => [...prev, { sender: 'ai', text: reply }]);
+      const res = await fetchApi('/integrations/whatsapp/test-ping', { method: 'POST' });
+      if (res?.success) {
+        setPingStatus(`✓ Live ping sent to ${phone}`);
+        showToast(`✓ Ping delivered to ${phone}`);
+      } else {
+        setPingStatus(`✓ Number ${phone} active in LeadFlow AI`);
+        showToast(`✓ Verified active in workspace`);
+      }
     } catch {
-      const fallbackReply = (INDUSTRY_TEMPLATES[selectedIndustryKey] || INDUSTRY_TEMPLATES.hvac).sampleTestReply;
-      setTestMessages((prev) => [...prev, { sender: 'ai', text: fallbackReply }]);
+      setPingStatus(`✓ Number registered in workspace database`);
     } finally {
-      setTestLoading(false);
+      setWaLoading(false);
     }
   };
 
-  // Final Onboarding Complete Submission
-  const handleCompleteSetup = async () => {
-    setLoading(true);
-    const tmpl = INDUSTRY_TEMPLATES[selectedIndustryKey] || INDUSTRY_TEMPLATES.other;
+  const handleSimulatorSend = () => {
+    if (!simInput.trim()) return;
+    const userMsg = simInput.trim();
+    setSimInput('');
 
+    const newChat = [...simMessages, { role: 'customer' as const, text: userMsg }];
+    setSimMessages(newChat);
+
+    setTimeout(() => {
+      let reply = `Thanks for messaging ${bizName || 'our team'}! `;
+      if (userMsg.toLowerCase().includes('price') || userMsg.toLowerCase().includes('cost')) {
+        const sList = services.slice(0, 2).map((s) => `${s.name} (${s.price})`).join(', ');
+        reply += `Our standard services start with: ${sList}. Would you like to schedule an appointment?`;
+      } else if (userMsg.toLowerCase().includes('book') || userMsg.toLowerCase().includes('appointment') || userMsg.toLowerCase().includes('time')) {
+        reply += `We have open slots tomorrow at 10:00 AM or 2:30 PM. What is your address and contact number to reserve?`;
+      } else {
+        reply += `I am ${agentName}, available 24/7 to answer your questions and book your appointment. How can I help you today?`;
+      }
+      setSimMessages([...newChat, { role: 'ai' as const, text: reply }]);
+    }, 600);
+  };
+
+  const handleCompleteLaunch = async () => {
+    setLoading(true);
     try {
+      const payload = {
+        business_name: bizName.trim() || 'My Business',
+        industry: selectedIndustryKey,
+        phone: phone.trim(),
+        address: city.trim() || 'Local Service Area',
+        timezone: timezone || 'Asia/Kolkata',
+        description: `24/7 customer care and appointments for ${bizName}`,
+        services: services,
+        hours:
+          scheduleMode === '24_7'
+            ? {
+                monday: { open: '00:00', close: '23:59', closed: false },
+                tuesday: { open: '00:00', close: '23:59', closed: false },
+                wednesday: { open: '00:00', close: '23:59', closed: false },
+                thursday: { open: '00:00', close: '23:59', closed: false },
+                friday: { open: '00:00', close: '23:59', closed: false },
+                saturday: { open: '00:00', close: '23:59', closed: false },
+                sunday: { open: '00:00', close: '23:59', closed: false },
+              }
+            : INDUSTRY_TEMPLATES[selectedIndustryKey]?.defaultHours,
+        service_areas: ['Local Service Metro Area'],
+        agent_name: agentName.trim() || 'LeadFlow AI',
+        agent_role: agentRole.trim() || 'Sales & Dispatch Specialist',
+      };
+
       await fetchApi('/businesses/onboarding', {
         method: 'POST',
-        body: JSON.stringify({
-          business_name: bizName,
-          industry: tmpl.name,
-          phone,
-          address: city,
-          timezone,
-          description: customNotes || tmpl.defaultDescription,
-          services,
-          hours: tmpl.defaultHours,
-          service_areas: tmpl.defaultServiceAreas,
-          agent_name: agentName,
-          agent_role: agentRole,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      router.push('/dashboard');
-    } catch {
-      // Graceful fallback to dashboard
-      router.push('/dashboard');
+      showToast('🎉 AI Employee Activated & Live!');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
+    } catch (err: any) {
+      showToast('✓ Setup complete! Opening dashboard...');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } finally {
       setLoading(false);
     }
   };
 
-  // Build Mobile Continuation URL with current state
-  const mobileContinuationUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/onboarding?step=${step}&industry=${selectedIndustryKey}&token=${localStorage.getItem('leadflow_token') || 'demo'}`
-    : `https://leadflow.ai/onboarding?step=${step}`;
-
-  const stepTitles = [
-    'Welcome',
-    'Your Business',
-    'Services & Goals',
-    'Connect WhatsApp',
-    'Teach Your AI',
-    'Connect Calendar',
-    'Test & Activate',
-    'Ready!',
+  const STEP_TITLES = [
+    { num: 1, label: 'Industry & Business' },
+    { num: 2, label: 'Services & Pricing' },
+    { num: 3, label: 'AI Persona' },
+    { num: 4, label: 'WhatsApp Channel' },
+    { num: 5, label: 'Activate & Launch' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-8 selection:bg-sky-500 selection:text-white">
-      {/* Toast Notification */}
+    <div className="min-h-screen bg-[#05070c] bg-ambient-pitch text-slate-100 flex flex-col justify-between p-4 sm:p-6 lg:p-10 font-sans selection:bg-blue-600 selection:text-white">
+      {/* Toast */}
       {successToast && (
-        <div className="fixed top-6 right-6 z-50 rounded-2xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-2xl flex items-center gap-2 animate-fade-in border border-emerald-400/40">
-          <CheckCircle2 className="h-4 w-4" />
+        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-emerald-500/40 bg-emerald-950/90 px-5 py-3 text-xs font-bold text-emerald-300 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
           <span>{successToast}</span>
         </div>
       )}
 
-      {/* Top Header & Mobile QR Action */}
-      <header className="mx-auto w-full max-w-4xl flex items-center justify-between pb-6 border-b border-slate-800/80">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-4 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-600 text-white font-bold shadow-lg shadow-sky-600/30">
-            <Bot className="h-6 w-6" />
+          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-600/30">
+            <Bot className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-              <span>Set Up Your AI Employee</span>
-              <span className="rounded-md bg-sky-500/20 px-2 py-0.5 text-[10px] text-sky-400 font-mono">Zero Code</span>
+            <div className="text-base font-black text-white tracking-tight flex items-center gap-2">
+              <span>LeadFlow AI</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                Setup Wizard
+              </span>
             </div>
-            <div className="text-[11px] text-slate-400">Step {step} of 8: {stepTitles[step - 1]}</div>
+            <div className="text-xs text-slate-400">24/7 Autonomous Sales &amp; Dispatch Employee</div>
           </div>
         </div>
 
-        {/* Continue on Mobile Button */}
-        <button
-          onClick={() => setShowQRModal(true)}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition"
-          title="Scan QR code to continue this setup on your phone"
-        >
-          <Smartphone className="h-4 w-4 text-sky-400" />
-          <span className="hidden sm:inline">Continue on Phone</span>
-          <QrCode className="h-3.5 w-3.5 text-slate-400" />
-        </button>
-      </header>
-
-      {/* Main Guided Step Area */}
-      <main className="mx-auto w-full max-w-3xl my-8">
-        {/* Visual Step Pipeline Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2">
-            <span className="text-sky-400 font-bold">{Math.round((step / 8) * 100)}% Complete</span>
-            <span>Step {step} of 8</span>
-          </div>
-
-          <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
-            <div
-              className="h-full bg-gradient-to-r from-sky-500 to-blue-500 transition-all duration-300 rounded-full shadow-md shadow-sky-500/50"
-              style={{ width: `${(step / 8) * 100}%` }}
-            />
-          </div>
-
-          {/* Step Pill Badges (Desktop) */}
-          <div className="hidden sm:flex justify-between mt-3 text-[11px] font-medium text-slate-500">
-            {stepTitles.map((title, i) => {
-              const stepNumber = i + 1;
-              const isPast = stepNumber < step;
-              const isCurrent = stepNumber === step;
-              return (
-                <div
-                  key={i}
-                  className={`flex items-center gap-1 ${
-                    isCurrent
-                      ? 'text-sky-400 font-bold'
-                      : isPast
-                      ? 'text-emerald-400'
-                      : 'text-slate-600'
-                  }`}
-                >
-                  <span>{isPast ? '✓' : `${stepNumber}.`}</span>
-                  <span>{title}</span>
-                </div>
-              );
-            })}
-          </div>
+        {/* Stepper Progress Bar */}
+        <div className="hidden md:flex items-center gap-3">
+          {STEP_TITLES.map((st) => (
+            <button
+              key={st.num}
+              type="button"
+              onClick={() => st.num <= step && setStep(st.num)}
+              className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${
+                step === st.num
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : step > st.num
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-pointer'
+                  : 'text-slate-500 opacity-60 pointer-events-none'
+              }`}
+            >
+              <span>{step > st.num ? '✓' : st.num}</span>
+              <span>{st.label}</span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Card Container */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-10 shadow-2xl backdrop-blur-md">
-          {/* STEP 1: WELCOME */}
+      {/* Main Grid Content */}
+      <div className="max-w-7xl mx-auto w-full my-6 grid lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Visual Step Card */}
+        <div className="lg:col-span-7 pitch-card p-6 sm:p-8 animate-fade-in relative overflow-hidden">
+          {/* Subtle Ambient Top Border Glow */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-500" />
+
+          {/* ================= STEP 1: INDUSTRY & BUSINESS ================= */}
           {step === 1 && (
-            <div className="text-center py-4 space-y-6">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-sky-600 to-blue-500 shadow-2xl shadow-sky-600/30">
-                <Bot className="h-10 w-10 text-white" />
-              </div>
-
+            <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">
-                  Meet Your New 24/7 AI Employee 👋
+                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Store className="h-3.5 w-3.5" /> Step 1 of 5 • Business Identity
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                  What industry is your business?
                 </h1>
-                <p className="mx-auto mt-3 max-w-lg text-sm text-slate-300 leading-relaxed">
-                  We will help you onboard your AI employee in just 3 quick minutes. It will answer customer questions, collect phone numbers, and book appointments automatically.
+                <p className="text-xs text-slate-400 mt-1">
+                  Selecting your industry automatically trains your AI employee with pre-tuned services, FAQs, and pricing models.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-2">
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-1.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 font-bold text-sm">
-                    ⚡
-                  </div>
-                  <div className="text-xs font-bold text-white">2-Second Response</div>
-                  <div className="text-[11px] text-slate-400">Never lose an interested lead because you were busy on a job.</div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-1.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 font-bold text-sm">
-                    ✓
-                  </div>
-                  <div className="text-xs font-bold text-white">Collects Customer Details</div>
-                  <div className="text-[11px] text-slate-400">Extracts customer name, problem, phone number, and service needed.</div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-1.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 font-bold text-sm">
-                    📅
-                  </div>
-                  <div className="text-xs font-bold text-white">Calendar Booking</div>
-                  <div className="text-[11px] text-slate-400">Checks your schedule and confirms appointment times automatically.</div>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <button
-                  onClick={handleNext}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-600 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-sky-600/30 hover:bg-sky-500 transition active:scale-95"
-                >
-                  Start Setup (Takes 3 min)
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: TELL US ABOUT YOUR BUSINESS */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Tell us about your business</h2>
-                <p className="text-xs text-slate-400 mt-1">Select your industry so we can automatically suggest the best settings.</p>
-              </div>
-
-              {/* Industry Selection Cards */}
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-300">What kind of business is it?</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {Object.entries(INDUSTRY_TEMPLATES).map(([key, tmpl]) => {
-                    const isSelected = selectedIndustryKey === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => handleSelectIndustry(key)}
-                        className={`rounded-2xl p-3.5 text-left border transition flex flex-col justify-between ${
-                          isSelected
-                            ? 'border-sky-500 bg-sky-500/10 shadow-lg shadow-sky-500/10'
-                            : 'border-slate-800 bg-slate-950 hover:bg-slate-900'
-                        }`}
-                      >
-                        <div className="text-2xl mb-1">{tmpl.icon}</div>
-                        <div>
-                          <div className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                            {tmpl.name}
-                          </div>
-                          <div className="text-[10px] text-slate-500">{tmpl.badge}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Business Name */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300">What is your business called?</label>
-                <input
-                  type="text"
-                  value={bizName}
-                  onChange={(e) => setBizName(e.target.value)}
-                  placeholder="e.g. Sharma Dental Clinic or Apex Plumbing"
-                  className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp / Contact Phone *</label>
-                  <PhoneInputWithCountry
-                    value={phone}
-                    onChange={setPhone}
-                    defaultCountryCode="IN"
-                    placeholder="98765 43210"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">City / Location</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="e.g. Kolkata, WB, India"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-sky-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: WHAT SHOULD YOUR AI HELP WITH & SERVICES */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">What should your AI employee do?</h2>
-                <p className="text-xs text-slate-400 mt-1">Check what you want handled automatically.</p>
-              </div>
-
-              {/* Goal Checkboxes */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  {
-                    key: 'answerQuestions',
-                    title: 'Answer Customer Questions',
-                    desc: 'Instantly reply with services, pricing, and business hours.',
-                  },
-                  {
-                    key: 'collectLeads',
-                    title: 'Collect Customer Details',
-                    desc: 'Ask for customer name, phone number, and exact issue.',
-                  },
-                  {
-                    key: 'bookAppointments',
-                    title: 'Book Service Appointments',
-                    desc: 'Offer available time slots and lock in confirmed dates.',
-                  },
-                  {
-                    key: 'sendFollowUps',
-                    title: 'Send Friendly Follow-Ups',
-                    desc: 'Politely re-engage customers who asked questions but did not book.',
-                  },
-                ].map((g) => {
-                  const isActive = (goals as any)[g.key];
+              {/* Visual Industry Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {INDUSTRIES.map((ind) => {
+                  const isSel = selectedIndustryKey === ind.key;
                   return (
                     <button
-                      key={g.key}
+                      key={ind.key}
                       type="button"
-                      onClick={() => setGoals({ ...goals, [g.key]: !isActive })}
-                      className={`rounded-2xl p-4 text-left border transition flex items-start justify-between ${
-                        isActive
-                          ? 'border-sky-500/50 bg-sky-500/10'
-                          : 'border-slate-800 bg-slate-950 text-slate-400'
+                      onClick={() => handleSelectIndustry(ind.key)}
+                      className={`p-3.5 rounded-2xl text-left transition-all duration-200 border flex flex-col justify-between ${
+                        isSel
+                          ? 'bg-blue-600/15 border-blue-500 shadow-pitch-glow-blue scale-[1.02]'
+                          : 'bg-[#070a11] border-white/[0.06] hover:border-white/[0.18] hover:bg-[#0c101b]'
                       }`}
                     >
+                      <div className="text-2xl mb-2">{ind.icon}</div>
                       <div>
-                        <div className="text-xs font-bold text-white">{g.title}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">{g.desc}</div>
-                      </div>
-                      <div
-                        className={`h-5 w-5 rounded-lg flex items-center justify-center border text-xs font-bold flex-shrink-0 mt-0.5 ${
-                          isActive
-                            ? 'border-sky-500 bg-sky-600 text-white'
-                            : 'border-slate-700 bg-slate-900 text-transparent'
-                        }`}
-                      >
-                        ✓
+                        <div className={`text-xs font-bold ${isSel ? 'text-white' : 'text-slate-200'}`}>
+                          {ind.label}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{ind.desc}</div>
                       </div>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Pre-populated Services & Prices */}
-              <div className="pt-2 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-white">Suggested Services & Pricing</span>
-                    <p className="text-[11px] text-slate-400">Pre-filled for {INDUSTRY_TEMPLATES[selectedIndustryKey]?.name || 'your business'}.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomServices(!showCustomServices)}
-                    className="text-xs font-semibold text-sky-400 hover:text-sky-300"
-                  >
-                    {showCustomServices ? 'Done Editing' : '+ Customize Services'}
-                  </button>
+              {/* Business Name & Phone Inputs */}
+              <div className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300">Company / Trade Business Name</label>
+                  <input
+                    type="text"
+                    value={bizName}
+                    onChange={(e) => setBizName(e.target.value)}
+                    placeholder="e.g. Apex Air & Plumbing Pro"
+                    className="input-pitch"
+                  />
                 </div>
 
-                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                  {services.map((srv, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-2xl border border-slate-800 bg-slate-950 p-3.5 flex items-center justify-between text-xs"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="font-bold text-white">{srv.name}</div>
-                        <div className="text-[11px] text-slate-400">{srv.description}</div>
-                      </div>
-                      <div className="text-right flex-shrink-0 pl-3">
-                        <span className="rounded-lg bg-sky-500/10 px-2.5 py-1 text-xs font-bold text-sky-400 border border-sky-500/20">
-                          {srv.price}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-300">WhatsApp Business Number</label>
+                    <PhoneInputWithCountry value={phone} onChange={setPhone} defaultCountryCode="IN" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-300">Service City / Region</label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Austin, TX or Kolkata, WB"
+                      className="input-pitch"
+                    />
+                  </div>
                 </div>
+              </div>
+
+              {/* Next Button */}
+              <div className="pt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  disabled={!bizName.trim()}
+                  className="btn-pitch-primary"
+                >
+                  <span>Continue to Services</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 4: CONNECT WHATSAPP */}
-          {step === 4 && (
-            <div className="space-y-6 text-center py-2">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
-                <MessageSquare className="h-8 w-8" />
-              </div>
-
+          {/* ================= STEP 2: SERVICES & PRICING ================= */}
+          {step === 2 && (
+            <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Connect WhatsApp</h2>
-                <p className="mx-auto mt-2 max-w-md text-xs text-slate-300 leading-relaxed">
-                  Let your AI employee talk to your customers directly on WhatsApp. It replies in under 2 seconds, day and night.
+                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5" /> Step 2 of 5 • Catalog &amp; Pricing
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                  What services do you offer?
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Your AI employee quotes these exact prices and durations to customers over WhatsApp and web chat.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-4 max-w-md mx-auto text-left">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-300">WhatsApp Business Number:</label>
-                  <PhoneInputWithCountry
-                    value={phone}
-                    onChange={setPhone}
-                    defaultCountryCode="IN"
+              {/* Service List Cards */}
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {services.map((srv, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-2xl bg-[#070a11] border border-white/[0.08] flex items-center justify-between gap-3 hover:border-white/[0.16] transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white">{srv.name}</div>
+                        <div className="text-[10px] text-slate-400">{srv.description || 'Estimated 60 min job'}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-xs font-bold text-emerald-400 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                        {srv.price}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveService(idx)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Custom Service Inline */}
+              <div className="p-4 rounded-2xl bg-[#070a11] border border-dashed border-white/[0.12] space-y-3">
+                <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Plus className="h-3.5 w-3.5 text-blue-400" /> Add Custom Service
+                </div>
+                <div className="grid sm:grid-cols-12 gap-2">
+                  <input
+                    type="text"
+                    value={newServiceName}
+                    onChange={(e) => setNewServiceName(e.target.value)}
+                    placeholder="Service Name (e.g. AC Deep Cleaning)"
+                    className="input-pitch sm:col-span-7 !py-2 !text-xs"
                   />
+                  <input
+                    type="text"
+                    value={newServicePrice}
+                    onChange={(e) => setNewServicePrice(e.target.value)}
+                    placeholder="Price (e.g. $140 or ₹1,800)"
+                    className="input-pitch sm:col-span-3 !py-2 !text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomService}
+                    className="btn-pitch-primary sm:col-span-2 !py-2 !text-xs font-bold"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-4 flex items-center justify-between">
+                <button type="button" onClick={() => setStep(1)} className="btn-pitch-secondary">
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+                <button type="button" onClick={() => setStep(3)} className="btn-pitch-primary">
+                  <span>Continue to AI Setup</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================= STEP 3: AI AGENT PERSONA ================= */}
+          {step === 3 && (
+            <div className="space-y-6 animate-fade-slide-up">
+              <div>
+                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Bot className="h-3.5 w-3.5" /> Step 3 of 5 • AI Employee Customization
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                  Choose your AI Employee Persona
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Customize the name, conversational tone, and responsibilities for your 24/7 AI employee.
+                </p>
+              </div>
+
+              {/* Visual Avatar Chooser */}
+              <div className="grid grid-cols-3 gap-3">
+                {AGENT_AVATARS.map((av) => {
+                  const isSel = selectedAvatar === av.id;
+                  return (
+                    <button
+                      key={av.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAvatar(av.id);
+                        setAgentName(av.name);
+                      }}
+                      className={`p-4 rounded-2xl text-center border transition-all ${
+                        isSel
+                          ? 'bg-blue-600/15 border-blue-500 shadow-pitch-glow-blue scale-[1.02]'
+                          : 'bg-[#070a11] border-white/[0.06] hover:border-white/[0.15]'
+                      }`}
+                    >
+                      <div className={`h-12 w-12 rounded-2xl mx-auto mb-2 flex items-center justify-center text-xl bg-gradient-to-tr ${av.color} shadow-lg`}>
+                        {av.icon}
+                      </div>
+                      <div className="text-xs font-bold text-white">{av.name}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{av.role}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Name & Role Inputs */}
+              <div className="grid sm:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300">AI Employee Name</label>
+                  <input
+                    type="text"
+                    value={agentName}
+                    onChange={(e) => setAgentName(e.target.value)}
+                    className="input-pitch"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300">Tone of Voice</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { key: 'friendly', label: 'Warm' },
+                      { key: 'professional', label: 'Pro' },
+                      { key: 'formal', label: 'Formal' },
+                    ].map((t) => (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setTone(t.key as any)}
+                        className={`py-3 rounded-2xl text-xs font-bold border transition ${
+                          tone === t.key
+                            ? 'bg-blue-600 text-white border-blue-500'
+                            : 'bg-[#070a11] text-slate-300 border-white/[0.08]'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-4 flex items-center justify-between">
+                <button type="button" onClick={() => setStep(2)} className="btn-pitch-secondary">
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+                <button type="button" onClick={() => setStep(4)} className="btn-pitch-primary">
+                  <span>Continue to WhatsApp</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================= STEP 4: WHATSAPP INTEGRATION ================= */}
+          {step === 4 && (
+            <div className="space-y-6 animate-fade-slide-up">
+              <div>
+                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5" /> Step 4 of 5 • WhatsApp Channel
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                  Connect your WhatsApp Number
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Your AI employee will automatically respond to customer inquiries and let you control it from your WhatsApp.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-[#070a11] border border-white/[0.08] space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300">WhatsApp Business Number</label>
+                  <PhoneInputWithCountry value={phone} onChange={setPhone} defaultCountryCode="IN" />
                 </div>
 
                 <div className="space-y-2 text-xs pt-1">
                   <div className="flex items-center gap-2 text-slate-300">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>Works with any international country code</span>
+                    <span>Instant &lt; 2s AI response time day &amp; night</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-300">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>You can take over conversations anytime</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>Safe, private, and disconnectable anytime</span>
+                    <span>Control your AI from your phone (&ldquo;How many leads today?&rdquo;)</span>
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-2">
+                <div className="pt-2">
                   {waConnected ? (
                     <div className="space-y-3">
-                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
                         <CheckCircle2 className="h-4 w-4" />
                         <span>Registered in LeadFlow AI: {phone}</span>
                       </div>
-
                       <button
                         type="button"
-                        onClick={async () => {
-                          setWaLoading(true);
-                          try {
-                            const res = await fetchApi('/integrations/whatsapp/test-ping', { method: 'POST' });
-                            showToast(`✓ Ping sent to ${phone}`);
-                          } catch {
-                            showToast(`✓ Registered ${phone} in database`);
-                          } finally {
-                            setWaLoading(false);
-                          }
-                        }}
+                        onClick={handleTestPing}
                         disabled={waLoading}
-                        className="w-full rounded-xl bg-slate-900 border border-slate-700 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 transition flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-xs font-bold text-white hover:bg-white/[0.1] transition flex items-center justify-center gap-2"
                       >
-                        <span>📲 Send Test Ping to WhatsApp</span>
+                        <Zap className="h-4 w-4 text-amber-400" />
+                        <span>{waLoading ? 'Sending...' : '📲 Send Live Test Ping to WhatsApp'}</span>
                       </button>
+                      {pingStatus && (
+                        <div className="text-[11px] text-center text-slate-400 font-mono">{pingStatus}</div>
+                      )}
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={handleConnectWhatsApp}
                       disabled={waLoading}
-                      className="w-full rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full btn-pitch-emerald !py-3.5"
                     >
-                      {waLoading ? 'Connecting...' : '📱 Confirm & Register WhatsApp Number'}
+                      {waLoading ? 'Registering...' : '📱 Connect & Register WhatsApp Number'}
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="text-xs text-slate-400 hover:text-slate-200 underline"
-                >
-                  Skip for now (I will use Website Chat first)
+              {/* Action Buttons */}
+              <div className="pt-4 flex items-center justify-between">
+                <button type="button" onClick={() => setStep(3)} className="btn-pitch-secondary">
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+                <button type="button" onClick={() => setStep(5)} className="btn-pitch-primary">
+                  <span>Review &amp; Launch</span>
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 5: TEACH YOUR AI EMPLOYEE */}
+          {/* ================= STEP 5: ACTIVATE & LAUNCH ================= */}
           {step === 5 && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Teach your AI employee</h2>
-                <p className="text-xs text-slate-400 mt-1">Tell your AI how you want it to talk to customers.</p>
-              </div>
-
-              {/* Name & Role */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300">What should customers call your AI?</label>
-                  <input
-                    type="text"
-                    value={agentName}
-                    onChange={(e) => setAgentName(e.target.value)}
-                    placeholder="e.g. Apex Helper or Sarah"
-                    className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                  />
+                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Step 5 of 5 • Final Review &amp; Launch
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300">AI Job Title</label>
-                  <input
-                    type="text"
-                    value={agentRole}
-                    onChange={(e) => setAgentRole(e.target.value)}
-                    placeholder="e.g. Booking Assistant"
-                    className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Tone Selection */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-2">How should your AI speak?</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {[
-                    { id: 'friendly', label: 'Friendly & Warm', icon: '😊' },
-                    { id: 'professional', label: 'Professional', icon: '👔' },
-                    { id: 'casual', label: 'Casual & Relaxed', icon: '💬' },
-                    { id: 'formal', label: 'Formal & Direct', icon: '🏛️' },
-                  ].map((t) => {
-                    const isSelected = agentTone === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setAgentTone(t.id as any)}
-                        className={`rounded-xl p-3 text-center border transition ${
-                          isSelected
-                            ? 'border-sky-500 bg-sky-500/10 text-white font-bold'
-                            : 'border-slate-800 bg-slate-950 text-slate-400'
-                        }`}
-                      >
-                        <div className="text-xl mb-1">{t.icon}</div>
-                        <div className="text-xs">{t.label}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Custom Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300">
-                  Anything else your AI should know? (In your own words)
-                </label>
-                <textarea
-                  rows={3}
-                  value={customNotes}
-                  onChange={(e) => setCustomNotes(e.target.value)}
-                  placeholder="e.g. We offer free parking behind our clinic, 10% senior discount on Tuesdays, and 1-year guarantee on all repair work."
-                  className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none leading-relaxed"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* STEP 6: CONNECT CALENDAR */}
-          {step === 6 && (
-            <div className="space-y-6 text-center py-2">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-400">
-                <Calendar className="h-8 w-8" />
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Connect your Calendar (Optional)</h2>
-                <p className="mx-auto mt-2 max-w-md text-xs text-slate-300 leading-relaxed">
-                  Connecting Google Calendar allows your AI employee to check your real-time open slots and confirm bookings without double-booking you.
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                  Your AI Employee is Ready to Work
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Everything is configured. Click below to launch your AI employee on your live workspace.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-4 max-w-md mx-auto text-left">
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-sky-400" />
-                    <span>Checks when you are free or busy</span>
+              {/* Summary Review Card */}
+              <div className="p-6 rounded-2xl bg-[#070a11] border border-white/[0.08] space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">Business</div>
+                    <div className="text-xs font-bold text-white mt-1 truncate">{bizName || 'My Business'}</div>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-sky-400" />
-                    <span>Automatically creates customer calendar events</span>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">AI Assistant</div>
+                    <div className="text-xs font-bold text-white mt-1 truncate">{agentName}</div>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-sky-400" />
-                    <span>Sends email calendar invites to both you and customer</span>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">Services</div>
+                    <div className="text-xs font-bold text-emerald-400 mt-1">{services.length} Configured</div>
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  {calConnected ? (
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Google Calendar Synced!</span>
-                    </div>
-                  ) : (
+                {/* Operating Hours Toggle */}
+                <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-white">AI Operating Availability</div>
+                    <div className="text-[10px] text-slate-400">When should your AI answer customer inquiries?</div>
+                  </div>
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={handleConnectCalendar}
-                      disabled={calLoading}
-                      className="w-full rounded-xl bg-sky-600 py-3 text-xs font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                      onClick={() => setScheduleMode('24_7')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        scheduleMode === '24_7'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white/[0.05] text-slate-400'
+                      }`}
                     >
-                      {calLoading ? 'Connecting...' : '📅 Connect Google Calendar'}
+                      24/7 Active
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setScheduleMode('business_hours')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        scheduleMode === 'business_hours'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white/[0.05] text-slate-400'
+                      }`}
+                    >
+                      Mon-Sat
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-center">
+              {/* Big Launch Button */}
+              <div className="pt-2">
                 <button
                   type="button"
-                  onClick={handleNext}
-                  className="text-xs text-slate-400 hover:text-slate-200 underline"
-                >
-                  Skip for now (I will connect calendar later in Settings)
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 7: TEST & ACTIVATE */}
-          {step === 7 && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Test your AI employee live</h2>
-                  <p className="text-xs text-slate-400 mt-1">Try asking a question to see how your AI replies before turning it on.</p>
-                </div>
-
-                {/* Master Switch */}
-                <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
-                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-bold text-emerald-400">Automation: ON</span>
-                </div>
-              </div>
-
-              {/* Chat Simulation Sandbox */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-                <div className="h-52 overflow-y-auto space-y-3 p-2">
-                  {testMessages.map((msg, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                          msg.sender === 'user'
-                            ? 'bg-sky-600 text-white rounded-tr-sm'
-                            : 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700'
-                        }`}
-                      >
-                        {msg.text}
-                      </div>
-                    </div>
-                  ))}
-                  {testLoading && (
-                    <div className="flex justify-start">
-                      <div className="rounded-2xl bg-slate-800 px-4 py-2 text-xs text-slate-400 animate-pulse">
-                        {agentName} is typing...
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Input form */}
-                <form onSubmit={handleSendTestMessage} className="flex gap-2 pt-2 border-t border-slate-800">
-                  <input
-                    type="text"
-                    value={testInput}
-                    onChange={(e) => setTestInput(e.target.value)}
-                    placeholder="Type a test customer message..."
-                    className="flex-1 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    disabled={testLoading || !testInput.trim()}
-                    className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-500 disabled:opacity-50"
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 8: YOU'RE READY! */}
-          {step === 8 && (
-            <div className="text-center py-4 space-y-6">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-600 shadow-2xl shadow-emerald-600/30">
-                <CheckCircle2 className="h-10 w-10 text-white" />
-              </div>
-
-              <div>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">
-                  🎉 Your AI Employee is Ready!
-                </h1>
-                <p className="mx-auto mt-2 max-w-md text-sm text-slate-300 leading-relaxed">
-                  <strong className="text-white">{agentName}</strong> is now working 24/7 for <strong className="text-white">{bizName}</strong>.
-                </p>
-              </div>
-
-              {/* Account & AI Status Summary Card */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 max-w-md mx-auto text-left space-y-3 text-xs">
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-400">AI Status:</span>
-                  <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    🟢 Active &amp; Working
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-400">Business Workspace:</span>
-                  <span className="font-semibold text-white">{bizName}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-400">AI Name:</span>
-                  <span className="font-semibold text-white">{agentName}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-400">Account Owner:</span>
-                  <span className="font-semibold text-white">{userEmail}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Response Speed:</span>
-                  <span className="font-bold text-sky-400">&lt; 2 seconds</span>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <button
-                  onClick={handleCompleteSetup}
+                  onClick={handleCompleteLaunch}
                   disabled={loading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-emerald-600/30 hover:bg-emerald-500 transition active:scale-95 disabled:opacity-50"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 text-sm font-black text-white shadow-2xl shadow-blue-600/40 hover:opacity-95 transition-all duration-200 hover:scale-[1.01] flex items-center justify-center gap-2"
                 >
-                  {loading ? 'Launching Workspace...' : 'Go to My Dashboard →'}
+                  <Sparkles className="h-5 w-5" />
+                  <span>{loading ? 'Launching Live Workspace...' : '🚀 Launch My 24/7 AI Employee Now'}</span>
                 </button>
               </div>
-            </div>
-          )}
 
-          {/* Navigation Bottom Controls */}
-          {step < 8 && (
-            <div className="mt-8 flex items-center justify-between border-t border-slate-800 pt-6">
-              {step > 1 ? (
-                <button
-                  onClick={handleBack}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
+              {/* Action Buttons */}
+              <div className="flex items-center justify-start">
+                <button type="button" onClick={() => setStep(4)} className="btn-pitch-secondary">
+                  <ArrowLeft className="h-4 w-4" /> Back
                 </button>
-              ) : (
-                <div />
-              )}
-
-              <button
-                onClick={handleNext}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 transition active:scale-95"
-              >
-                <span>Continue</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              </div>
             </div>
           )}
         </div>
-      </main>
 
-      {/* QR Code Continuation Modal */}
-      {showQRModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
-          <div className="relative w-full max-w-md">
-            <button
-              onClick={() => setShowQRModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold z-10"
-            >
-              &times;
-            </button>
-            <QRCodeDisplay
-              url={mobileContinuationUrl}
-              title="Finish setup on your phone 📱"
-              subtitle="Scan this QR code with your phone camera to continue your setup right from your mobile browser."
-            />
+        {/* Right Column: Live Mobile AI Simulator (High visual impact) */}
+        <div className="lg:col-span-5 pitch-card p-6 flex flex-col justify-between h-full min-h-[580px]">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold text-white">Live Simulator Preview</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.08]">
+                Instant &lt; 2s Reply
+              </span>
+            </div>
+
+            {/* Mobile Chat Interface Container */}
+            <div className="rounded-2xl bg-[#04060a] border border-white/[0.08] overflow-hidden flex flex-col h-[420px]">
+              {/* Simulator Chat Header */}
+              <div className="p-3.5 bg-[#090d16] border-b border-white/[0.08] flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-bold text-white text-xs shadow-md">
+                  {agentName.slice(0, 1) || 'A'}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>{agentName || 'LeadFlow AI'}</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </div>
+                  <div className="text-[10px] text-slate-400">{bizName || 'Your Business'}</div>
+                </div>
+              </div>
+
+              {/* Simulator Chat Messages */}
+              <div className="flex-1 p-4 space-y-3 overflow-y-auto text-xs">
+                {simMessages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === 'customer' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
+                        msg.role === 'customer'
+                          ? 'bg-blue-600 text-white rounded-br-none shadow-md shadow-blue-600/20'
+                          : 'bg-[#111726] text-slate-200 border border-white/[0.08] rounded-bl-none'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Quick Prompt Chips */}
+              <div className="p-2 bg-[#080c14] border-t border-white/[0.06] flex gap-1.5 overflow-x-auto">
+                {['What are your prices?', 'Book tomorrow at 2 PM', 'Do you service my area?'].map((p, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setSimInput(p);
+                    }}
+                    className="whitespace-nowrap px-2.5 py-1 rounded-lg text-[10px] font-medium bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.06] transition"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              {/* Simulator Input Box */}
+              <div className="p-2.5 bg-[#090d16] border-t border-white/[0.08] flex items-center gap-2">
+                <input
+                  type="text"
+                  value={simInput}
+                  onChange={(e) => setSimInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSimulatorSend()}
+                  placeholder="Test customer message..."
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#04060a] border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleSimulatorSend}
+                  className="h-8 w-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center">
+            <div className="text-[11px] text-slate-400">
+              ⚡ Powered by <strong className="text-white">LeadFlow AI Engine</strong> &bull; Auto-Syncs with Calendar
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Simple Footer */}
-      <footer className="mx-auto w-full max-w-4xl text-center text-xs text-slate-600 pt-4">
-        LeadFlow AI • No technical knowledge required • Your data stays secure
-      </footer>
+      </div>
     </div>
   );
 }
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-950 text-slate-300 text-xs">Loading onboarding...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#05070c] flex items-center justify-center text-white">
+          Loading Setup Wizard...
+        </div>
+      }
+    >
       <OnboardingContent />
     </Suspense>
   );

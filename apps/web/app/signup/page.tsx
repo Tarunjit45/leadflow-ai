@@ -162,70 +162,71 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b11] text-slate-100 flex flex-col justify-between selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-[#05070c] bg-ambient-pitch text-slate-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white font-sans">
       {/* Top Header Navigation */}
-      <header className="border-b border-slate-800/80 bg-slate-950/40 backdrop-blur-md px-6 py-4">
+      <header className="border-b border-white/[0.08] bg-[#05070c]/80 backdrop-blur-xl px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm">
-              <Bot className="w-6 h-6 text-white" />
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-600/30 transition-transform duration-200 group-hover:scale-105">
+              <Bot className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">LeadFlow<span className="text-blue-500">.ai</span></span>
+            <span className="text-xl font-black tracking-tight text-white">LeadFlow<span className="text-blue-400 font-mono">.ai</span></span>
           </Link>
-          <div className="text-sm text-slate-400">
+          <div className="text-xs text-slate-400">
             Already have an account?{' '}
-            <Link href="/login" className="text-blue-400 font-semibold hover:text-blue-300 transition-colors">
-              Sign in
+            <Link href="/login" className="text-blue-400 font-bold hover:text-blue-300 transition-colors">
+              Sign in &rarr;
             </Link>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-6 animate-fade-in">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-8 animate-fade-in">
         <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Left Column: Value Prop */}
           <div className="lg:col-span-5 space-y-6 hidden lg:block">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Real 24/7 AI Sales Employee</span>
             </div>
 
-            <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
               Turn every WhatsApp &amp; web inquiry into a booked client.
             </h1>
 
             <div className="space-y-4 pt-2">
-              <div className="flex items-start gap-3 text-sm text-slate-300">
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="flex items-start gap-3 text-xs text-slate-300">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                  ✓
                 </div>
-                <span><strong>Instant &lt; 2s Replies:</strong> Your AI answers inquiries, quotes prices, and books appointments 24/7.</span>
+                <span><strong className="text-white">Instant &lt; 2s Replies:</strong> Your AI answers inquiries, quotes prices, and books appointments 24/7.</span>
               </div>
-              <div className="flex items-start gap-3 text-sm text-slate-300">
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="flex items-start gap-3 text-xs text-slate-300">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                  ✓
                 </div>
-                <span><strong>Worldwide WhatsApp Support:</strong> Connect your real WhatsApp Business number with any country code.</span>
+                <span><strong className="text-white">Worldwide WhatsApp Support:</strong> Connect your real WhatsApp Business number with any country code.</span>
               </div>
-              <div className="flex items-start gap-3 text-sm text-slate-300">
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="flex items-start gap-3 text-xs text-slate-300">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                  ✓
                 </div>
-                <span><strong>Zero Technical Skills:</strong> Real-time setup in under 3 minutes.</span>
+                <span><strong className="text-white">Zero Technical Skills:</strong> Real-time setup wizard in under 3 minutes.</span>
               </div>
             </div>
           </div>
 
           {/* Right Column: Signup Form or Verification Prompt */}
           <div className="lg:col-span-7">
-            <div className="bg-[#0e131f] border border-slate-800/80 rounded-3xl p-6 sm:p-10 shadow-premium">
+            <div className="pitch-card p-6 sm:p-8 space-y-6 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-500" />
               
               {!isSubmitted ? (
                 <>
                   <div className="mb-6">
-                    <h2 className="text-2xl font-bold tracking-tight text-white">
+                    <h2 className="text-2xl font-black tracking-tight text-white">
                       Create your business workspace
                     </h2>
                     <p className="text-slate-400 text-xs mt-1">

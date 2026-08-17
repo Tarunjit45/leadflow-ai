@@ -3,20 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Bot,
-  User,
-  Phone,
+  Users,
   Calendar,
   DollarSign,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  ArrowRight,
-  Sparkles,
-  MessageSquare,
   TrendingUp,
-  ShieldCheck,
+  AlertTriangle,
+  ArrowRight,
+  Bot,
   Zap,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  Smartphone,
+  ChevronRight,
+  MessageSquare,
+  ShieldAlert,
+  PlayCircle,
+  PauseCircle,
   Plus,
 } from 'lucide-react';
 import { fetchApi } from '../../lib/api';
@@ -141,19 +144,21 @@ export default function DashboardHomePage() {
   };
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 space-y-8 max-w-6xl mx-auto animate-fade-in">
-      {/* Top Greeting & Status Banner */}
-      <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 shadow-premium space-y-6">
+    <div className="p-6 sm:p-8 lg:p-10 space-y-8 max-w-6xl mx-auto animate-fade-in font-sans">
+      {/* Top Greeting & Status Hero Banner */}
+      <div className="pitch-card p-6 sm:p-8 space-y-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-500" />
+        
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-400">
-              {greeting} 👋
+            <div className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+              <span>{greeting}</span> <span>👋</span>
             </div>
-            <h1 className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="mt-1 text-2xl sm:text-3xl font-black text-white tracking-tight">
               {agentName} is {agentStatus === 'active' ? 'active & ready to answer leads' : 'currently paused'}.
             </h1>
-            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Workspace: <strong className="text-slate-200 font-semibold">{bizName}</strong> • Operating on real live data across WhatsApp and Web.
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Workspace: <strong className="text-slate-200 font-bold">{bizName}</strong> &bull; Operating on live real data across WhatsApp &amp; Web.
             </p>
           </div>
 
@@ -161,25 +166,27 @@ export default function DashboardHomePage() {
           <div className="flex-shrink-0">
             {agentStatus === 'active' ? (
               <button
+                type="button"
                 onClick={handleToggleAutomation}
                 disabled={statusLoading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 px-5 py-3 text-xs font-bold text-white shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-50"
+                className="btn-pitch-emerald !py-3 !px-5"
               >
-                <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse-calm" />
+                <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
                 <span>🟢 AI is Working</span>
-                <span className="rounded bg-black/20 px-2 py-0.5 text-[10px] font-medium ml-1">
+                <span className="rounded-lg bg-black/25 px-2 py-0.5 text-[10px] font-semibold ml-1">
                   Click to Pause
                 </span>
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleToggleAutomation}
                 disabled={statusLoading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 px-5 py-3 text-xs font-bold text-white shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 hover:bg-amber-500 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-amber-600/30 transition-all active:scale-95 disabled:opacity-50"
               >
                 <span className="h-2.5 w-2.5 rounded-full bg-white" />
                 <span>🔴 AI is Paused</span>
-                <span className="rounded bg-black/20 px-2 py-0.5 text-[10px] font-bold ml-1">
+                <span className="rounded-lg bg-black/25 px-2 py-0.5 text-[10px] font-bold ml-1">
                   Click to Resume
                 </span>
               </button>
@@ -187,49 +194,49 @@ export default function DashboardHomePage() {
           </div>
         </div>
 
-        {/* 4 Real Performance Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-800/80">
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-            <div className="text-[11px] font-medium text-slate-400">Total Inquiries</div>
-            <div className="text-2xl font-extrabold text-white">{metrics.customersHelped}</div>
-            <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+        {/* 4 Real Performance KPI Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-white/[0.08]">
+          <div className="p-4 rounded-2xl bg-[#060910] border border-white/[0.06] space-y-1">
+            <div className="text-[11px] font-semibold text-slate-400">Total Inquiries</div>
+            <div className="text-2xl font-black text-white tracking-tight">{metrics.customersHelped}</div>
+            <div className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
               <Zap className="w-3 h-3" /> Live Real Data
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-            <div className="text-[11px] font-medium text-slate-400">Qualified Leads</div>
-            <div className="text-2xl font-extrabold text-blue-400">{metrics.newLeads}</div>
-            <div className="text-[10px] text-slate-400">Services &amp; location confirmed</div>
+          <div className="p-4 rounded-2xl bg-[#060910] border border-white/[0.06] space-y-1">
+            <div className="text-[11px] font-semibold text-slate-400">Qualified Leads</div>
+            <div className="text-2xl font-black text-blue-400 tracking-tight">{metrics.newLeads}</div>
+            <div className="text-[10px] text-slate-400">Services confirmed</div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-            <div className="text-[11px] font-medium text-slate-400">Appointments</div>
-            <div className="text-2xl font-extrabold text-white">{metrics.appointmentsBooked}</div>
-            <div className="text-[10px] text-emerald-400 font-semibold">Synced with calendar</div>
+          <div className="p-4 rounded-2xl bg-[#060910] border border-white/[0.06] space-y-1">
+            <div className="text-[11px] font-semibold text-slate-400">Appointments</div>
+            <div className="text-2xl font-black text-white tracking-tight">{metrics.appointmentsBooked}</div>
+            <div className="text-[10px] text-emerald-400 font-bold">Synced with calendar</div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
-            <div className="text-[11px] font-medium text-slate-400">Est. Revenue Recovered</div>
-            <div className="text-2xl font-extrabold text-emerald-400">
+          <div className="p-4 rounded-2xl bg-[#060910] border border-white/[0.06] space-y-1">
+            <div className="text-[11px] font-semibold text-slate-400">Est. Revenue Recovered</div>
+            <div className="text-2xl font-black text-emerald-400 tracking-tight">
               ${metrics.estimatedRevenue.toLocaleString()}
             </div>
-            <div className="text-[10px] text-slate-400">From automated bookings</div>
+            <div className="text-[10px] text-slate-400">From bookings</div>
           </div>
         </div>
       </div>
 
-      {/* Needs Attention Warning Box (Only displays if real customer needs human review) */}
+      {/* Needs Attention Warning Box */}
       {attentionItems.length > 0 && (
-        <div className="rounded-3xl border border-amber-500/25 bg-amber-500/5 p-6 space-y-4">
+        <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
                 <h2 className="text-sm font-bold text-white">Customer Conversation Needs Review</h2>
-                <p className="text-xs text-amber-300/80">AI flagged this conversation for human attention.</p>
+                <p className="text-xs text-amber-200">AI flagged this conversation for human attention.</p>
               </div>
             </div>
             <Link
@@ -240,7 +247,7 @@ export default function DashboardHomePage() {
             </Link>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#0e131f] border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-4 rounded-2xl bg-[#05070c] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="text-xs font-bold text-white flex items-center gap-2">
                 <span>{attentionItems[0].customerName}</span>
@@ -252,7 +259,7 @@ export default function DashboardHomePage() {
             </div>
             <Link
               href="/dashboard/leads"
-              className="btn-primary py-2 px-4 text-xs font-bold shrink-0"
+              className="btn-pitch-primary !py-2 !px-4 !text-xs shrink-0"
             >
               Take Over Conversation
             </Link>
@@ -262,7 +269,6 @@ export default function DashboardHomePage() {
 
       {/* Main Grid: Activity Stream + Setup Checklist */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         {/* Left Column: Recent Customer Activity */}
         <div className="lg:col-span-8 space-y-4">
           <div className="flex items-center justify-between">
@@ -280,17 +286,19 @@ export default function DashboardHomePage() {
           </div>
 
           {recentCustomers.length === 0 ? (
-            <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-8 text-center space-y-3">
-              <MessageSquare className="w-8 h-8 text-slate-600 mx-auto" />
+            <div className="pitch-card p-8 text-center space-y-3">
+              <div className="h-12 w-12 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center mx-auto text-slate-500">
+                <MessageSquare className="w-6 h-6" />
+              </div>
               <h3 className="text-sm font-bold text-white">No incoming customer inquiries yet</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
+              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
                 When a customer sends a message on WhatsApp or through your website chat widget, their conversation will appear here in real-time.
               </p>
               <div className="pt-2 flex justify-center gap-3">
-                <Link href="/dashboard/agent" className="btn-primary py-2 px-4 text-xs">
+                <Link href="/dashboard/agent" className="btn-pitch-primary !py-2.5 !px-4 !text-xs">
                   Test AI in Studio
                 </Link>
-                <Link href="/dashboard/settings?tab=channels" className="btn-secondary py-2 px-4 text-xs">
+                <Link href="/dashboard/settings?tab=channels" className="btn-pitch-secondary !py-2.5 !px-4 !text-xs">
                   Connect Channels
                 </Link>
               </div>
@@ -300,10 +308,10 @@ export default function DashboardHomePage() {
               {recentCustomers.map((c) => (
                 <div
                   key={c.id}
-                  className="p-4 rounded-2xl bg-[#0e131f] border border-slate-800/80 hover:border-slate-700/80 transition-colors duration-150 flex items-start justify-between gap-4"
+                  className="p-4 rounded-2xl bg-[#0a0e17] border border-white/[0.08] hover:border-white/[0.16] transition flex items-start justify-between gap-4"
                 >
                   <div className="flex items-start gap-3.5">
-                    <div className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 font-bold text-xs text-slate-300">
+                    <div className="w-9 h-9 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shrink-0 font-bold text-xs text-slate-300">
                       {c.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="space-y-1">
@@ -311,7 +319,7 @@ export default function DashboardHomePage() {
                         <span className="text-xs font-bold text-white">{c.name}</span>
                         <span className="text-[10px] text-slate-500 font-mono">{c.phone}</span>
                         {c.isAi && (
-                          <span className="px-1.5 py-0.2 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-semibold">
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold">
                             AI Handled
                           </span>
                         )}
@@ -319,7 +327,7 @@ export default function DashboardHomePage() {
                       <p className="text-xs text-slate-300 leading-relaxed">{c.action}</p>
                       <div className="text-[10px] text-slate-500 flex items-center gap-2">
                         <span>Service: <strong className="text-slate-400">{c.service}</strong></span>
-                        <span>•</span>
+                        <span>&bull;</span>
                         <span>{c.time}</span>
                       </div>
                     </div>
@@ -327,7 +335,7 @@ export default function DashboardHomePage() {
 
                   <Link
                     href="/dashboard/leads"
-                    className="btn-secondary py-1.5 px-3 text-[11px] font-semibold shrink-0"
+                    className="btn-pitch-secondary !py-1.5 !px-3 !text-[11px] font-bold shrink-0"
                   >
                     View Details
                   </Link>
@@ -337,17 +345,17 @@ export default function DashboardHomePage() {
           )}
         </div>
 
-        {/* Right Column: Setup Checklist & Channels */}
+        {/* Right Column: Setup Checklist & Studio */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-5">
+          <div className="pitch-card p-6 space-y-5">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-bold text-white">Setup Checklist</h3>
                 <span className="text-xs font-bold text-blue-400">{setupProgress.percentage || 0}%</span>
               </div>
-              <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div className="w-full bg-black/60 h-2 rounded-full overflow-hidden border border-white/[0.08]">
                 <div
-                  className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full transition-all duration-500"
                   style={{ width: `${setupProgress.percentage || 0}%` }}
                 />
               </div>
@@ -368,7 +376,7 @@ export default function DashboardHomePage() {
                       href="/dashboard/settings"
                       className="text-blue-400 hover:underline font-bold text-[11px]"
                     >
-                      Connect →
+                      Connect &rarr;
                     </Link>
                   )}
                 </div>
@@ -376,8 +384,8 @@ export default function DashboardHomePage() {
             </div>
           </div>
 
-          {/* Quick AI Studio Action */}
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-3">
+          {/* Quick AI Studio Card */}
+          <div className="pitch-card p-6 space-y-3">
             <div className="flex items-center gap-2 text-white font-bold text-sm">
               <Bot className="w-4 h-4 text-blue-400" />
               <span>Test AI Employee Live</span>
@@ -387,13 +395,12 @@ export default function DashboardHomePage() {
             </p>
             <Link
               href="/dashboard/agent"
-              className="btn-primary w-full py-2.5 text-xs font-bold text-center"
+              className="btn-pitch-primary w-full !py-2.5 !text-xs font-bold text-center"
             >
-              Open AI Studio
+              Open Studio Simulator
             </Link>
           </div>
         </div>
-
       </div>
     </div>
   );

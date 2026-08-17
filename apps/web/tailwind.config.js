@@ -9,33 +9,42 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
         },
-        surface: {
-          base: '#080b11',
-          card: '#0e131f',
-          hover: '#131929',
-          elevated: '#171e30',
-          border: 'rgba(255, 255, 255, 0.08)',
+        accent: {
+          blue: '#3b82f6',
+          cyan: '#06b6d4',
+          emerald: '#10b981',
+          indigo: '#6366f1',
+        },
+        pitch: {
+          bg: '#05070c',
+          card: '#0a0e17',
+          elevated: '#101623',
+          border: 'rgba(255, 255, 255, 0.07)',
+          borderHover: 'rgba(255, 255, 255, 0.16)',
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
       animation: {
-        'fade-in': 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'fade-slide-up': 'fadeSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'pulse-calm': 'pulseCalm 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'fade-slide-up': 'fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'fade-slide-down': 'fadeSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'scale-in': 'scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
+        'float-slow': 'floatSlow 4s ease-in-out infinite',
+        'shimmer': 'shimmer 2.5s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -43,18 +52,35 @@ module.exports = {
           '100%': { opacity: '1' },
         },
         fadeSlideUp: {
-          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        pulseCalm: {
-          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%': { opacity: '0.45', transform: 'scale(1.12)' },
-        }
+        fadeSlideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleIn: {
+          '0%': { opacity: '0', transform: 'scale(0.96)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        pulseGlow: {
+          '0%, 100%': { opacity: '0.6', transform: 'scale(1)' },
+          '50%': { opacity: '1', transform: 'scale(1.05)' },
+        },
+        floatSlow: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
       boxShadow: {
-        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        'premium': '0 4px 20px -2px rgba(0, 0, 0, 0.35)',
-        'brand-glow': '0 0 24px -4px rgba(37, 99, 235, 0.25)',
+        'pitch-card': '0 4px 24px -1px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.05)',
+        'pitch-glow-blue': '0 0 35px -5px rgba(59, 130, 246, 0.25)',
+        'pitch-glow-emerald': '0 0 35px -5px rgba(16, 185, 129, 0.25)',
+        'pitch-glow-cyan': '0 0 35px -5px rgba(6, 182, 212, 0.25)',
       }
     },
   },
