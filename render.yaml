@@ -36,9 +36,7 @@ services:
       - key: DODO_PAYMENTS_WEBHOOK_KEY
         sync: false
       - key: META_PHONE_NUMBER_ID
-        sync: false
-      - key: META_ACCESS_TOKEN
-        sync: false
+        value: 1265571813306233
       - key: META_VERIFY_TOKEN
         value: leadflow_whatsapp_webhook_verification_token_secret
 
