@@ -5,7 +5,6 @@ import {
   Bot,
   User,
   Phone,
-  Mail,
   Calendar,
   Send,
   Search,
@@ -14,8 +13,6 @@ import {
   Clock,
   MessageSquare,
   Sparkles,
-  ChevronRight,
-  ShieldAlert,
   CalendarPlus,
 } from 'lucide-react';
 import { fetchApi } from '../../../lib/api';
@@ -49,7 +46,7 @@ export default function CustomersLeadsPage() {
         selectConversation(data[0]);
       }
     } catch {
-      // Fallback demo mock conversations if API offline
+      // Fallback mock conversations for smooth offline preview
       const mockConvs = [
         {
           id: 'conv_demo_1',
@@ -58,25 +55,28 @@ export default function CustomersLeadsPage() {
           channel: 'whatsapp',
           status: 'ai_handling',
           last_message_preview: 'Appointment confirmed for tomorrow at 10:00 AM! Tech David is assigned.',
-          last_message_at: new Date().toISOString(),
+          updated_at: '4 min ago',
+          unread_count: 0,
         },
         {
           id: 'conv_demo_2',
           customer_name: 'Robert Miller',
           customer_id: '+15125554412',
-          channel: 'website_chat',
-          status: 'human_handling',
-          last_message_preview: 'Looking for a master plumber consultation on a Navien tankless install.',
-          last_message_at: new Date(Date.now() - 900000).toISOString(),
+          channel: 'widget',
+          status: 'human_takeover',
+          last_message_preview: 'I have a 3,000 sq ft home and need a master plumber quote for Navien unit.',
+          updated_at: '15 min ago',
+          unread_count: 1,
         },
         {
           id: 'conv_demo_3',
-          customer_name: 'Elena Vance',
-          customer_id: '+15125557731',
+          customer_name: 'David Chen',
+          customer_id: '+15125553389',
           channel: 'whatsapp',
           status: 'ai_handling',
-          last_message_preview: 'Hi Elena! Following up to see if you wanted to schedule your seasonal tune-up?',
-          last_message_at: new Date(Date.now() - 86400000).toISOString(),
+          last_message_preview: 'Could you send technician pricing for central AC leak check?',
+          updated_at: '3 hours ago',
+          unread_count: 0,
         },
       ];
       setConversations(mockConvs);
@@ -93,300 +93,242 @@ export default function CustomersLeadsPage() {
     try {
       const msgs = await fetchApi(`/conversations/${conv.id}/messages`);
       setMessages(msgs);
-
-      const leads = await fetchApi('/leads/');
-      const matchingLead = leads.find((l: any) => l.conversation_id === conv.id);
-      setLeadDetail(matchingLead || null);
     } catch {
       if (conv.id === 'conv_demo_1') {
         setMessages([
-          { id: 'm1', sender_type: 'customer', content: 'Hi! Our AC just started blowing warm air and the outside unit is making a humming noise.' },
-          { id: 'm2', sender_type: 'ai', content: "Hello Sarah! I've logged this as an emergency diagnostic request. Would you like me to book our earliest available opening tomorrow morning at 10:00 AM?" },
-          { id: 'm3', sender_type: 'customer', content: 'Yes please, 10 AM tomorrow is perfect. My address is 3402 Scenic View, Westlake Hills.' },
-          { id: 'm4', sender_type: 'ai', content: 'Appointment confirmed for tomorrow at 10:00 AM! Tech David is assigned. You will receive a text when he is on the way.' },
+          { id: 'm1', sender_type: 'customer', content: 'Hi, our AC stopped cooling and is making a humming noise. Are you available tomorrow morning?', created_at: '10:14 AM' },
+          { id: 'm2', sender_type: 'agent', content: 'Hello Sarah! I can certainly dispatch a technician for your AC system. Our emergency diagnostic is $120. Would 10:00 AM tomorrow work for you?', created_at: '10:14 AM' },
+          { id: 'm3', sender_type: 'customer', content: 'Yes please, 10:00 AM works perfectly. Our address is 412 Oak Valley Dr.', created_at: '10:15 AM' },
+          { id: 'm4', sender_type: 'agent', content: 'Awesome! Your service appointment is confirmed for tomorrow at 10:00 AM. Technician David has been assigned and will text when en route.', created_at: '10:15 AM' },
         ]);
         setLeadDetail({
-          id: 'lead_1',
           name: 'Sarah Jenkins',
           phone: '+1 (512) 555-9821',
-          email: 'sarah.jenkins@gmail.com',
-          service: 'AC Emergency Repair',
-          problem: 'Outdoor condenser humming noise, blowing warm air.',
-          location: 'Westlake Hills, TX 78746',
-          score: 95,
-          status: 'booked',
-          estimated_value: 850.0,
-        });
-      } else if (conv.id === 'conv_demo_2') {
-        setMessages([
-          { id: 'm1', sender_type: 'customer', content: 'Hello, looking for an estimate for installing a Navien tankless water heater.' },
-          { id: 'm2', sender_type: 'ai', content: 'Hi Robert! Typical installations range from $2,400 to $3,800 with a 10-year warranty. Would you like our master plumber to call you?' },
-          { id: 'm3', sender_type: 'customer', content: 'Yes please, could someone call me at 2 PM today?' },
-        ]);
-        setLeadDetail({
-          id: 'lead_2',
-          name: 'Robert Miller',
-          phone: '+1 (512) 555-4412',
-          service: 'Tankless Water Heater Installation',
-          problem: 'Customer requested master plumber phone consultation at 2 PM.',
-          score: 85,
-          status: 'human_review',
-          estimated_value: 3200.0,
+          address: '412 Oak Valley Dr, Austin TX',
+          urgency: 'high',
+          service_needed: 'AC Diagnostic & Repair',
+          estimated_value: 450,
+          lead_score: 92,
         });
       } else {
         setMessages([
-          { id: 'm1', sender_type: 'customer', content: 'Hi, do you do seasonal furnace inspections?' },
-          { id: 'm2', sender_type: 'ai', content: 'Hello Elena! Yes, our seasonal tune-up is a flat $180 and includes a full 24-point electrical and safety check.' },
+          { id: 'm10', sender_type: 'customer', content: 'Hi, looking for a quote on a Navien tankless water heater replacement.', created_at: '09:30 AM' },
+          { id: 'm11', sender_type: 'agent', content: 'Hello Robert! We install high-efficiency Navien tankless units. Typical installations range between $2,400 - $3,800 depending on gas line capacity.', created_at: '09:30 AM' },
+          { id: 'm12', sender_type: 'customer', content: 'I have a 3,000 sq ft home and need a master plumber quote for Navien unit.', created_at: '09:32 AM' },
         ]);
         setLeadDetail({
-          id: 'lead_3',
-          name: 'Elena Vance',
-          phone: '+1 (512) 555-7731',
-          service: 'Seasonal HVAC Tune-up',
-          problem: 'Seasonal inspection inquiry.',
-          score: 60,
-          status: 'nurturing',
-          estimated_value: 180.0,
+          name: 'Robert Miller',
+          phone: '+1 (512) 555-4412',
+          address: 'Austin, TX',
+          urgency: 'medium',
+          service_needed: 'Tankless Water Heater Installation',
+          estimated_value: 3200,
+          lead_score: 85,
         });
       }
     }
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const handleTakeoverToggle = async () => {
+    if (!selectedConv) return;
+    const isCurrentlyHuman = selectedConv.status === 'human_takeover';
+    const newStatus = isCurrentlyHuman ? 'ai_handling' : 'human_takeover';
+
+    try {
+      await fetchApi(`/conversations/${selectedConv.id}/takeover`, {
+        method: 'POST',
+        body: JSON.stringify({ human_takeover: !isCurrentlyHuman }),
+      });
+      setSelectedConv({ ...selectedConv, status: newStatus });
+      setConversations(
+        conversations.map((c) => (c.id === selectedConv.id ? { ...c, status: newStatus } : c))
+      );
+    } catch {
+      setSelectedConv({ ...selectedConv, status: newStatus });
+      setConversations(
+        conversations.map((c) => (c.id === selectedConv.id ? { ...c, status: newStatus } : c))
+      );
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !selectedConv) return;
-    setSending(true);
+    if (!inputText.trim() || sending || !selectedConv) return;
 
     const userText = inputText.trim();
     setInputText('');
+    setSending(true);
 
-    const tempMsg = {
+    const optimisticMsg = {
       id: `temp_${Date.now()}`,
-      sender_type: 'human',
+      sender_type: 'human_operator',
       content: userText,
-      created_at: new Date().toISOString(),
+      created_at: 'Just now',
     };
-    setMessages((prev) => [...prev, tempMsg]);
+    setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
       await fetchApi(`/conversations/${selectedConv.id}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ content: userText, sender_type: 'human' }),
+        body: JSON.stringify({ message: userText, sender_type: 'human_operator' }),
       });
-      const updatedMsgs = await fetchApi(`/conversations/${selectedConv.id}/messages`);
-      setMessages(updatedMsgs);
     } catch {
-      // Keep optimistic message
+      // Message already displayed optimistically
     } finally {
       setSending(false);
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  const toggleTakeover = async () => {
-    if (!selectedConv) return;
-    const newStatus = selectedConv.status === 'ai_handling' ? 'human_handling' : 'ai_handling';
-    try {
-      const updated = await fetchApi(`/conversations/${selectedConv.id}/takeover`, {
-        method: 'POST',
-        body: JSON.stringify({ status: newStatus }),
-      });
-      setSelectedConv({ ...selectedConv, status: updated.status });
-      setConversations((prev) =>
-        prev.map((c) => (c.id === selectedConv.id ? { ...c, status: updated.status } : c))
-      );
-    } catch {
-      setSelectedConv({ ...selectedConv, status: newStatus });
+  const filteredConversations = conversations.filter((c) => {
+    if (searchQuery) {
+      const matchName = (c.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchPhone = (c.customer_id || '').toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchName && !matchPhone) return false;
     }
-  };
-
-  const handleConfirmBooking = () => {
-    setBookingSuccess(true);
-    setTimeout(() => {
-      setBookingSuccess(false);
-      setShowBookingModal(false);
-      if (leadDetail) {
-        setLeadDetail({ ...leadDetail, status: 'booked' });
-      }
-    }, 1500);
-  };
-
-  const filteredConvs = conversations.filter((c) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      c.customer_name?.toLowerCase().includes(q) ||
-      c.customer_id?.toLowerCase().includes(q) ||
-      c.last_message_preview?.toLowerCase().includes(q)
-    );
+    return true;
   });
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-950">
-      {/* COLUMN 1: Conversation List (Left) */}
-      <div className="w-80 flex-shrink-0 border-r border-slate-800 flex flex-col bg-slate-950">
-        {/* Search & Filter Header */}
-        <div className="p-4 border-b border-slate-800 space-y-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search customers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-800 bg-slate-900 py-2 pl-9 pr-3 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none"
-            />
+    <div className="h-[calc(100vh-4rem)] flex overflow-hidden animate-fade-in">
+      {/* COLUMN 1: Conversation List */}
+      <div className="w-80 sm:w-96 flex-shrink-0 border-r border-slate-800/80 bg-[#080b11] flex flex-col justify-between">
+        <div className="p-4 border-b border-slate-800/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-base font-bold text-white tracking-tight">Customer Inbox</h1>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              {filteredConversations.length} Active
+            </span>
           </div>
 
-          <div className="flex gap-1 overflow-x-auto pb-1 text-[11px] font-semibold">
-            {[
-              { id: 'all', label: 'All' },
-              { id: 'ai_handling', label: 'AI Answering' },
-              { id: 'human_handling', label: 'Needs You' },
-            ].map((st) => (
-              <button
-                key={st.id}
-                onClick={() => setFilterStatus(st.id)}
-                className={`rounded-lg px-2.5 py-1 transition whitespace-nowrap ${
-                  filterStatus === st.id
-                    ? 'bg-sky-600 text-white'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by customer name or phone..."
+              className="input-field pl-9 text-xs"
+            />
           </div>
         </div>
 
-        {/* List of Conversations */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-900">
-          {loading ? (
-            <div className="p-6 text-center text-xs text-slate-500">Loading customers...</div>
-          ) : filteredConvs.length === 0 ? (
-            <div className="p-6 text-center text-xs text-slate-500">No customers found.</div>
-          ) : (
-            filteredConvs.map((conv) => {
-              const isSelected = selectedConv?.id === conv.id;
-              const isAI = conv.status === 'ai_handling';
+        {/* Conversation Items */}
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-800/50">
+          {filteredConversations.map((c) => {
+            const isSelected = selectedConv?.id === c.id;
+            const isHuman = c.status === 'human_takeover';
 
-              return (
-                <button
-                  key={conv.id}
-                  onClick={() => selectConversation(conv)}
-                  className={`w-full text-left p-4 transition flex flex-col gap-1.5 ${
-                    isSelected ? 'bg-slate-900 border-l-4 border-sky-500' : 'hover:bg-slate-900/50'
-                  }`}
-                >
+            return (
+              <button
+                key={c.id}
+                onClick={() => selectConversation(c)}
+                className={`w-full p-4 text-left transition-colors duration-150 flex items-start gap-3.5 ${
+                  isSelected
+                    ? 'bg-[#0e131f] border-l-2 border-blue-500'
+                    : 'hover:bg-slate-900/60'
+                }`}
+              >
+                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center font-bold text-xs text-slate-300 shrink-0 mt-0.5">
+                  {(c.customer_name || 'Customer').slice(0, 2).toUpperCase()}
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-white truncate max-w-[140px]">
-                      {conv.customer_name || conv.customer_id}
+                    <span className="text-xs font-bold text-white truncate">
+                      {c.customer_name || c.customer_id}
                     </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                        isAI
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                      }`}
-                    >
-                      {isAI ? 'AI Live' : 'Your Turn'}
-                    </span>
+                    <span className="text-[10px] text-slate-500 shrink-0">{c.updated_at}</span>
                   </div>
 
-                  <p className="text-[11px] text-slate-400 line-clamp-2 leading-tight">
-                    {conv.last_message_preview || 'No messages yet.'}
-                  </p>
+                  <p className="text-xs text-slate-400 truncate">{c.last_message_preview}</p>
 
-                  <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
-                    <span className="capitalize">{conv.channel === 'whatsapp' ? 'WhatsApp' : 'Website'}</span>
-                    <span>
-                      {new Date(conv.last_message_at || Date.now()).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    {isHuman ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 text-[10px] font-semibold">
+                        <User className="w-2.5 h-2.5" /> You Replying
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 text-[10px] font-semibold">
+                        <Bot className="w-2.5 h-2.5" /> AI Handling
+                      </span>
+                    )}
                   </div>
-                </button>
-              );
-            })
-          )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* COLUMN 2: Message Stream & Takeover (Middle) */}
-      <div className="flex-1 flex flex-col border-r border-slate-800 bg-slate-900/40">
+      {/* COLUMN 2: Message Thread & Takeover Bar */}
+      <div className="flex-1 flex flex-col justify-between bg-[#0b0e17] overflow-hidden">
         {selectedConv ? (
           <>
-            {/* Conversation Header & Takeover Action */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+            {/* Thread Header */}
+            <div className="h-16 flex-shrink-0 border-b border-slate-800/80 px-6 flex items-center justify-between bg-[#080b11]/80 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-slate-200 font-bold text-sm">
-                  {selectedConv.customer_name ? selectedConv.customer_name[0] : 'C'}
+                <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">
+                  {selectedConv.customer_name?.slice(0, 2).toUpperCase() || 'CU'}
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>{selectedConv.customer_name || selectedConv.customer_id}</span>
-                    <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
-                      {selectedConv.channel === 'whatsapp' ? '📱 WhatsApp' : '💬 Website'}
+                  <h2 className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>{selectedConv.customer_name || 'Inbound Lead'}</span>
+                    <span className="text-[10px] text-slate-400 font-mono font-normal">
+                      {selectedConv.customer_id}
                     </span>
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    Status: <span className="text-slate-200 font-medium">{selectedConv.status === 'ai_handling' ? 'AI Responding Automatically' : 'You are in control'}</span>
-                  </div>
+                  </h2>
+                  <div className="text-[10px] text-slate-500">Channel: {selectedConv.channel || 'WhatsApp'}</div>
                 </div>
               </div>
 
-              {/* One-Click Takeover Switch */}
+              {/* 1-Click Human Takeover Button */}
               <button
-                onClick={toggleTakeover}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition shadow-sm ${
-                  selectedConv.status === 'ai_handling'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                    : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20'
+                onClick={handleTakeoverToggle}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 shadow-sm ${
+                  selectedConv.status === 'human_takeover'
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                    : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
                 }`}
               >
-                {selectedConv.status === 'ai_handling' ? (
+                {selectedConv.status === 'human_takeover' ? (
                   <>
-                    <User className="h-4 w-4" />
-                    Take Over (Pause AI)
+                    <Bot className="w-3.5 h-3.5" />
+                    <span>Resume AI Control</span>
                   </>
                 ) : (
                   <>
-                    <Bot className="h-4 w-4" />
-                    Let AI Resume
+                    <User className="w-3.5 h-3.5" />
+                    <span>Take Over (Pause AI)</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Messages Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.map((m) => {
-                const isUser = m.sender_type === 'customer';
-                const isAI = m.sender_type === 'ai';
-                const isHuman = m.sender_type === 'human';
+            {/* Message Stream */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
+              {messages.map((m, idx) => {
+                const isCustomer = m.sender_type === 'customer';
+                const isHuman = m.sender_type === 'human_operator';
 
                 return (
                   <div
-                    key={m.id}
-                    className={`flex flex-col ${isUser ? 'items-start' : 'items-end'}`}
+                    key={m.id || idx}
+                    className={`flex flex-col ${isCustomer ? 'items-start' : 'items-end'}`}
                   >
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 mb-1 px-1">
-                      {isUser && <span>Customer</span>}
-                      {isAI && <span className="text-sky-400 flex items-center gap-1"><Bot className="h-3 w-3" /> AI Employee</span>}
-                      {isHuman && <span className="text-amber-400 flex items-center gap-1"><User className="h-3 w-3" /> You</span>}
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1 px-1">
+                      <span>{isCustomer ? selectedConv.customer_name : isHuman ? 'You (Human)' : 'LeadFlow AI'}</span>
+                      <span>•</span>
+                      <span>{m.created_at}</span>
                     </div>
 
                     <div
-                      className={`max-w-[75%] rounded-2xl p-3.5 text-xs leading-relaxed ${
-                        isUser
-                          ? 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700'
-                          : isAI
-                          ? 'bg-sky-600 text-white rounded-tr-sm shadow-md shadow-sky-600/10'
-                          : 'bg-amber-600 text-white rounded-tr-sm shadow-md shadow-amber-600/10'
+                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                        isCustomer
+                          ? 'bg-[#0e131f] border border-slate-800 text-slate-200'
+                          : isHuman
+                          ? 'bg-amber-600 text-white font-medium'
+                          : 'bg-blue-600 text-white font-medium'
                       }`}
                     >
                       {m.content}
@@ -398,170 +340,133 @@ export default function CustomersLeadsPage() {
             </div>
 
             {/* Input Composer */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-800 bg-slate-950 flex gap-2">
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-800/80 bg-[#080b11] flex gap-2">
               <input
                 type="text"
-                placeholder={
-                  selectedConv.status === 'ai_handling'
-                    ? 'Type a message to reply as human operator...'
-                    : 'Type your message to customer...'
-                }
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+                placeholder="Type a manual reply as human operator..."
+                className="input-field"
               />
               <button
                 type="submit"
                 disabled={sending || !inputText.trim()}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-sky-500 transition disabled:opacity-50"
+                className="btn-primary py-2.5 px-4 text-xs font-bold shrink-0"
               >
-                <Send className="h-3.5 w-3.5" />
-                Send
+                <Send className="w-3.5 h-3.5" />
+                <span>Send</span>
               </button>
             </form>
           </>
         ) : (
-          <div className="flex h-full items-center justify-center text-xs text-slate-500">
-            Select a customer from the left to view messages.
+          <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">
+            Select a customer conversation to view details.
           </div>
         )}
       </div>
 
-      {/* COLUMN 3: Customer Details & Lead Info (Right) */}
-      <div className="w-80 flex-shrink-0 flex flex-col bg-slate-950 p-6 overflow-y-auto">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
-          Customer &amp; Service Info
-        </h3>
+      {/* COLUMN 3: Lead Dossier Panel */}
+      {leadDetail && (
+        <div className="w-80 flex-shrink-0 border-l border-slate-800/80 bg-[#080b11] p-6 space-y-6 hidden xl:block overflow-y-auto">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Customer Dossier</h3>
+            <div className="mt-2 text-base font-extrabold text-white">{leadDetail.name}</div>
+            <div className="text-xs text-slate-400 font-mono">{leadDetail.phone}</div>
+          </div>
 
-        {leadDetail ? (
-          <div className="space-y-6">
-            {/* Qualification Card */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Customer Intent</span>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                    leadDetail.score >= 70
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  }`}
-                >
-                  {leadDetail.score >= 70 ? '🔥 High Urgency' : 'Warm Lead'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-slate-400">Estimated Value:</span>
-                <span className="font-bold text-white text-sm">${leadDetail.estimated_value || 850}</span>
+          <div className="space-y-3 pt-2 border-t border-slate-800/80 text-xs">
+            <div>
+              <div className="text-slate-500 text-[10px] uppercase font-bold">Service Required</div>
+              <div className="text-white font-semibold mt-0.5">{leadDetail.service_needed}</div>
+            </div>
+
+            <div>
+              <div className="text-slate-500 text-[10px] uppercase font-bold">Estimated Job Value</div>
+              <div className="text-emerald-400 font-bold text-sm mt-0.5">
+                ${leadDetail.estimated_value?.toLocaleString()}
               </div>
             </div>
 
-            {/* Contact Info */}
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-slate-500 text-[11px]">Customer Name</span>
-                <div className="font-semibold text-white mt-0.5">{leadDetail.name || 'Unknown'}</div>
-              </div>
-              <div>
-                <span className="text-slate-500 text-[11px]">Phone Number</span>
-                <div className="font-semibold text-white mt-0.5 flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-sky-400" />
-                  <span>{leadDetail.phone || 'N/A'}</span>
-                </div>
-              </div>
-              {leadDetail.email && (
-                <div>
-                  <span className="text-slate-500 text-[11px]">Email</span>
-                  <div className="font-semibold text-white mt-0.5 flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5 text-sky-400" />
-                    <span>{leadDetail.email}</span>
-                  </div>
-                </div>
-              )}
-              <div>
-                <span className="text-slate-500 text-[11px]">Service Requested</span>
-                <div className="font-semibold text-sky-300 mt-0.5">{leadDetail.service || 'Diagnostic & Repair'}</div>
-              </div>
-              <div>
-                <span className="text-slate-500 text-[11px]">Customer Notes / Problem</span>
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-2.5 text-slate-300 mt-1 text-[11px] leading-relaxed">
-                  {leadDetail.problem || 'Customer contacted regarding service.'}
-                </div>
-              </div>
+            <div>
+              <div className="text-slate-500 text-[10px] uppercase font-bold">Lead Score</div>
+              <div className="text-blue-400 font-bold text-sm mt-0.5">{leadDetail.lead_score}/100</div>
             </div>
 
-            {/* Quick Action: Book Appointment */}
-            <div className="pt-2">
-              <button
-                onClick={() => setShowBookingModal(true)}
-                className="w-full rounded-xl bg-sky-600 py-2.5 text-xs font-bold text-white hover:bg-sky-500 transition shadow-lg shadow-sky-600/20 flex items-center justify-center gap-2"
-              >
-                <CalendarPlus className="h-4 w-4" />
-                Book Service Appointment
-              </button>
+            <div>
+              <div className="text-slate-500 text-[10px] uppercase font-bold">Service Address</div>
+              <div className="text-slate-300 mt-0.5">{leadDetail.address}</div>
             </div>
           </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center text-xs text-slate-500">
-            Select a customer conversation to see extracted details.
-          </div>
-        )}
-      </div>
 
-      {/* Manual Booking Modal */}
+          <div className="pt-4 border-t border-slate-800/80">
+            <button
+              onClick={() => setShowBookingModal(true)}
+              className="btn-primary w-full py-2.5 text-xs font-bold"
+            >
+              <CalendarPlus className="w-3.5 h-3.5" />
+              <span>Book Appointment</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Confirmation Modal */}
       {showBookingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-[#0e131f] p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Book Appointment for {leadDetail?.name}</h3>
+              <h3 className="text-base font-bold text-white">Book Confirmed Appointment</h3>
               <button onClick={() => setShowBookingModal(false)} className="text-slate-400 hover:text-white">&times;</button>
             </div>
 
-            {bookingSuccess ? (
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
-                <CheckCircle2 className="h-5 w-5" />
-                <span>Appointment Confirmed on Google Calendar!</span>
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Customer</label>
+                <div className="p-2.5 rounded-xl bg-slate-950 text-white font-semibold">{leadDetail?.name}</div>
               </div>
-            ) : (
-              <div className="space-y-4 text-xs">
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Select Time Slot</label>
-                  <select
-                    value={bookingSlot}
-                    onChange={(e) => setBookingSlot(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-white text-xs"
-                  >
-                    <option>Tomorrow - 09:00 AM</option>
-                    <option>Tomorrow - 10:00 AM</option>
-                    <option>Tomorrow - 02:00 PM</option>
-                    <option>Day after Tomorrow - 11:00 AM</option>
-                  </select>
-                </div>
 
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Service</label>
-                  <input
-                    type="text"
-                    defaultValue={leadDetail?.service || 'Diagnostic & Repair'}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-white text-xs"
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    onClick={() => setShowBookingModal(false)}
-                    className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-slate-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmBooking}
-                    className="rounded-xl bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-500"
-                  >
-                    Confirm &amp; Sync Calendar
-                  </button>
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Select Available Time Slot</label>
+                <select
+                  value={bookingSlot}
+                  onChange={(e) => setBookingSlot(e.target.value)}
+                  className="input-field"
+                >
+                  <option>Tomorrow - 10:00 AM</option>
+                  <option>Tomorrow - 02:00 PM</option>
+                  <option>Wednesday - 09:00 AM</option>
+                  <option>Wednesday - 01:00 PM</option>
+                </select>
               </div>
-            )}
+
+              {bookingSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Appointment Booked &amp; Synced with Calendar!</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2">
+              <button
+                onClick={() => setShowBookingModal(false)}
+                className="btn-secondary py-2 px-4 text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setBookingSuccess(true);
+                  setTimeout(() => {
+                    setBookingSuccess(false);
+                    setShowBookingModal(false);
+                  }, 1500);
+                }}
+                className="btn-primary py-2 px-4 text-xs font-bold"
+              >
+                Confirm Dispatch
+              </button>
+            </div>
           </div>
         </div>
       )}

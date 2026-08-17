@@ -14,17 +14,15 @@ import {
   ArrowRight,
   Sparkles,
   MessageSquare,
-  PauseCircle,
-  PlayCircle,
   TrendingUp,
   ShieldCheck,
-  Send,
+  Zap,
 } from 'lucide-react';
 import { fetchApi } from '../../lib/api';
 
 export default function DashboardHomePage() {
-  const [bizName, setBizName] = useState('Apex Air & Plumbing Specialists');
-  const [agentName, setAgentName] = useState('Apex Dispatch AI');
+  const [bizName, setBizName] = useState('My Business Workspace');
+  const [agentName, setAgentName] = useState('LeadFlow AI Assistant');
   const [agentStatus, setAgentStatus] = useState<'active' | 'paused'>('active');
   const [statusLoading, setStatusLoading] = useState(false);
 
@@ -42,20 +40,20 @@ export default function DashboardHomePage() {
       id: 'att_1',
       customerName: 'Robert Miller',
       phone: '+1 (512) 555-4412',
-      reason: 'Requested master plumber phone consultation for Navien tankless install ($3,200)',
+      reason: 'Requested master plumber phone consultation for tankless install ($3,200)',
       time: '15 min ago',
       convId: 'conv_demo_2',
     },
   ]);
 
-  // Recent Customers
+  // Recent Customers Activity Stream
   const [recentCustomers, setRecentCustomers] = useState<any[]>([
     {
       id: 'c1',
       name: 'Sarah Jenkins',
       phone: '+1 (512) 555-9821',
-      action: 'Booked service appointment for tomorrow at 10:00 AM',
-      service: 'AC Emergency Repair',
+      action: 'Booked diagnostic appointment for tomorrow at 10:00 AM',
+      service: 'Diagnostic Inspection',
       time: '4 min ago',
       status: 'booked',
       isAi: true,
@@ -64,8 +62,8 @@ export default function DashboardHomePage() {
       id: 'c2',
       name: 'Robert Miller',
       phone: '+1 (512) 555-4412',
-      action: 'Asked for custom quote on tankless water heater',
-      service: 'Tankless Water Heater',
+      action: 'Asked for custom quote on high-efficiency unit',
+      service: 'System Replacement',
       time: '15 min ago',
       status: 'human_review',
       isAi: false,
@@ -74,8 +72,8 @@ export default function DashboardHomePage() {
       id: 'c3',
       name: 'Elena Vance',
       phone: '+1 (512) 555-7731',
-      action: 'Received automated friendly follow-up for seasonal tune-up',
-      service: 'Seasonal HVAC Tune-up',
+      action: 'Received automated friendly follow-up for seasonal maintenance',
+      service: 'Maintenance Tune-up',
       time: '1 hour ago',
       status: 'nurturing',
       isAi: true,
@@ -84,8 +82,8 @@ export default function DashboardHomePage() {
       id: 'c4',
       name: 'David Chen',
       phone: '+1 (512) 555-3389',
-      action: 'Qualified diagnostic lead; requested quote by text',
-      service: 'Refrigerant Leak Diagnostic',
+      action: 'Qualified diagnostic lead; requested quote by text message',
+      service: 'Refrigerant Diagnostic',
       time: '3 hours ago',
       status: 'qualified',
       isAi: true,
@@ -114,14 +112,12 @@ export default function DashboardHomePage() {
     else if (hour < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
 
-    // Load business
     fetchApi('/businesses/current')
       .then((data) => {
         if (data?.name) setBizName(data.name);
       })
       .catch(() => {});
 
-    // Load agent
     fetchApi('/agents/current')
       .then((data) => {
         if (data?.name) setAgentName(data.name);
@@ -129,14 +125,12 @@ export default function DashboardHomePage() {
       })
       .catch(() => {});
 
-    // Load progress
     fetchApi('/businesses/setup-progress')
       .then((data) => {
         if (data?.steps) setSetupProgress(data);
       })
       .catch(() => {});
 
-    // Load summary metrics
     fetchApi('/analytics/summary')
       .then((data) => {
         if (data) {
@@ -165,33 +159,33 @@ export default function DashboardHomePage() {
   };
 
   return (
-    <div className="p-6 sm:p-10 space-y-8 max-w-6xl mx-auto">
+    <div className="p-6 sm:p-8 lg:p-10 space-y-8 max-w-6xl mx-auto animate-fade-in">
       {/* Top Greeting & Status Banner */}
-      <div className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 shadow-premium space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-sky-400">
+            <div className="text-xs font-bold uppercase tracking-wider text-blue-400">
               {greeting} 👋
             </div>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {agentName} is {agentStatus === 'active' ? 'working and helping customers' : 'currently paused'}.
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              {agentName} is {agentStatus === 'active' ? 'active & helping customers' : 'currently paused'}.
             </h1>
-            <p className="text-xs text-slate-300 mt-1">
-              Workspace: <strong className="text-white">{bizName}</strong> • Replies in &lt; 2s across WhatsApp and Web.
+            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              Workspace: <strong className="text-slate-200 font-semibold">{bizName}</strong> • Real-time response on WhatsApp and Website chat.
             </p>
           </div>
 
-          {/* Big Master Toggle Button */}
+          {/* Master Toggle Button */}
           <div className="flex-shrink-0">
             {agentStatus === 'active' ? (
               <button
                 onClick={handleToggleAutomation}
                 disabled={statusLoading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-xs font-bold text-white shadow-xl shadow-emerald-600/30 hover:bg-emerald-500 transition active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 px-5 py-3 text-xs font-bold text-white shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-50"
               >
-                <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
-                <span>🟢 AI is Active</span>
-                <span className="rounded bg-black/20 px-2 py-0.5 text-[10px] font-normal ml-1">
+                <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse-calm" />
+                <span>🟢 AI is Working</span>
+                <span className="rounded bg-black/20 px-2 py-0.5 text-[10px] font-medium ml-1">
                   Click to Pause
                 </span>
               </button>
@@ -199,7 +193,7 @@ export default function DashboardHomePage() {
               <button
                 onClick={handleToggleAutomation}
                 disabled={statusLoading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 text-xs font-bold text-white shadow-xl shadow-amber-600/30 hover:bg-amber-500 transition active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 px-5 py-3 text-xs font-bold text-white shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-50"
               >
                 <span className="h-2.5 w-2.5 rounded-full bg-white" />
                 <span>🔴 AI is Paused</span>
@@ -211,260 +205,195 @@ export default function DashboardHomePage() {
           </div>
         </div>
 
-        {/* 4 Core Business Numbers */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-slate-800/80">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-1">
-            <div className="text-slate-400 text-xs font-medium">Customers Helped</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">{metrics.customersHelped}</div>
-            <div className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-              <span>↑ 100% replied in &lt; 2s</span>
+        {/* 4 Core Performance Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-800/80">
+          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+            <div className="text-[11px] font-medium text-slate-400">Total Inquiries</div>
+            <div className="text-2xl font-extrabold text-white">{metrics.customersHelped}</div>
+            <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+              <Zap className="w-3 h-3" /> 100% replied in &lt; 2s
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-1">
-            <div className="text-slate-400 text-xs font-medium">New Leads Qualified</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">{metrics.newLeads}</div>
-            <div className="text-[11px] text-sky-400 font-medium">Contact info & problem captured</div>
+          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+            <div className="text-[11px] font-medium text-slate-400">Qualified Leads</div>
+            <div className="text-2xl font-extrabold text-blue-400">{metrics.newLeads}</div>
+            <div className="text-[10px] text-slate-400">Services &amp; location confirmed</div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-1">
-            <div className="text-slate-400 text-xs font-medium">Appointments Booked</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">{metrics.appointmentsBooked}</div>
-            <div className="text-[11px] text-purple-400 font-medium">Synced with calendar</div>
+          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+            <div className="text-[11px] font-medium text-slate-400">Appointments</div>
+            <div className="text-2xl font-extrabold text-white">{metrics.appointmentsBooked}</div>
+            <div className="text-[10px] text-emerald-400 font-semibold">Synced with calendar</div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-1">
-            <div className="text-slate-400 text-xs font-medium">Est. Revenue Recovered</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">
+          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+            <div className="text-[11px] font-medium text-slate-400">Est. Revenue Recovered</div>
+            <div className="text-2xl font-extrabold text-emerald-400">
               ${metrics.estimatedRevenue.toLocaleString()}
             </div>
-            <div className="text-[11px] text-emerald-400 font-medium">Saved from lost inquiries</div>
+            <div className="text-[10px] text-slate-400">From off-hours leads</div>
           </div>
         </div>
       </div>
 
-      {/* Action Items Requiring Attention */}
+      {/* Needs Attention Warning Box */}
       {attentionItems.length > 0 && (
-        <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6 space-y-4 shadow-xl">
+        <div className="rounded-3xl border border-amber-500/25 bg-amber-500/5 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300 font-bold">
-                ⚠️
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
+                <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-white">
-                  {attentionItems.length} Customer Needs Your Attention
-                </h2>
-                <p className="text-xs text-amber-200/80">
-                  Customer requested human technician consultation or custom pricing.
-                </p>
+                <h2 className="text-sm font-bold text-white">1 Customer Needs Human Review</h2>
+                <p className="text-xs text-amber-300/80">AI safely requested human review for high-value custom request.</p>
               </div>
             </div>
-
             <Link
               href="/dashboard/leads"
-              className="inline-flex items-center gap-1 text-xs font-bold text-amber-300 hover:text-white transition"
+              className="text-xs font-bold text-amber-400 hover:text-amber-300 underline"
             >
-              <span>View in Inbox</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+              Open Inbox
             </Link>
           </div>
 
-          <div className="space-y-2">
-            {attentionItems.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-amber-500/20 bg-slate-950/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs text-white">{item.customerName}</span>
-                    <span className="text-[11px] text-slate-400 font-mono">({item.phone})</span>
-                    <span className="text-[10px] text-slate-500">• {item.time}</span>
-                  </div>
-                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">{item.reason}</p>
-                </div>
-
-                <Link
-                  href="/dashboard/leads"
-                  className="rounded-xl bg-amber-500/20 border border-amber-500/40 px-4 py-2 text-xs font-bold text-amber-200 hover:bg-amber-500/30 transition text-center whitespace-nowrap"
-                >
-                  Reply &amp; Take Over
-                </Link>
+          <div className="p-4 rounded-2xl bg-[#0e131f] border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="text-xs font-bold text-white flex items-center gap-2">
+                <span>{attentionItems[0].customerName}</span>
+                <span className="text-[10px] font-normal text-slate-400 font-mono">
+                  {attentionItems[0].phone}
+                </span>
               </div>
-            ))}
+              <p className="text-xs text-slate-300">{attentionItems[0].reason}</p>
+            </div>
+            <Link
+              href="/dashboard/leads"
+              className="btn-primary py-2 px-4 text-xs font-bold shrink-0"
+            >
+              Take Over Conversation
+            </Link>
           </div>
         </div>
       )}
 
-      {/* Main Grid: Recent Customers (Left) + Quick Setup Checklist & Actions (Right) */}
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Recent Customers Stream (2 Cols) */}
-        <div className="lg:col-span-2 space-y-4">
+      {/* Main Grid: Activity Stream + Setup Checklist */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Column: Recent Customer Activity */}
+        <div className="lg:col-span-8 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight">Recent Customer Activity</h2>
-              <p className="text-xs text-slate-400">Live conversations handled by your AI employee</p>
+              <h2 className="text-lg font-bold text-white tracking-tight">Recent Customer Activity</h2>
+              <p className="text-xs text-slate-400">Live feed of inquiries handled by your AI employee.</p>
             </div>
             <Link
               href="/dashboard/leads"
-              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+              className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1"
             >
-              <span>See all customers</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+              <span>View all leads</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/70 overflow-hidden divide-y divide-slate-800/60">
-            {recentCustomers.map((cust) => (
+          <div className="space-y-3">
+            {recentCustomers.map((c) => (
               <div
-                key={cust.id}
-                className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-900 transition"
+                key={c.id}
+                className="p-4 rounded-2xl bg-[#0e131f] border border-slate-800/80 hover:border-slate-700/80 transition-colors duration-150 flex items-start justify-between gap-4"
               >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-slate-200 font-bold text-sm flex-shrink-0">
-                    {cust.name[0]}
+                <div className="flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 font-bold text-xs text-slate-300">
+                    {c.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-white">{cust.name}</span>
-                      <span className="text-[11px] text-slate-400">{cust.phone}</span>
-                      <span
-                        className={`rounded-full px-2 py-0.2 text-[9px] font-bold uppercase tracking-wider ${
-                          cust.status === 'booked'
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : cust.status === 'human_review'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                        }`}
-                      >
-                        {cust.status.replace('_', ' ')}
-                      </span>
+                      <span className="text-xs font-bold text-white">{c.name}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">{c.phone}</span>
+                      {c.isAi && (
+                        <span className="px-1.5 py-0.2 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-semibold">
+                          AI Handled
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-300 leading-tight">{cust.action}</p>
-                    <div className="text-[10px] text-slate-500">{cust.time} • Service: {cust.service}</div>
+                    <p className="text-xs text-slate-300 leading-relaxed">{c.action}</p>
+                    <div className="text-[10px] text-slate-500 flex items-center gap-2">
+                      <span>Service: <strong className="text-slate-400">{c.service}</strong></span>
+                      <span>•</span>
+                      <span>{c.time}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex-shrink-0 sm:text-right">
-                  <Link
-                    href="/dashboard/leads"
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition"
-                  >
-                    <span>View Conversation</span>
-                  </Link>
-                </div>
+                <Link
+                  href="/dashboard/leads"
+                  className="btn-secondary py-1.5 px-3 text-[11px] font-semibold shrink-0"
+                >
+                  View Details
+                </Link>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right Column: Setup Progress & Quick Actions */}
-        <div className="space-y-6">
-          {/* Setup Progress Widget */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Setup Progress
-              </span>
-              <span className="text-xs font-bold text-sky-400">
-                {setupProgress.completed_count || 4} of {setupProgress.total_count || 5} Complete
-              </span>
+        {/* Right Column: Setup Checklist & Channels */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-5">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-sm font-bold text-white">Setup Checklist</h3>
+                <span className="text-xs font-bold text-blue-400">{setupProgress.percentage}%</span>
+              </div>
+              <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                  style={{ width: `${setupProgress.percentage}%` }}
+                />
+              </div>
             </div>
 
-            <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full"
-                style={{ width: `${setupProgress.percentage || 80}%` }}
-              />
-            </div>
-
-            <div className="space-y-2 pt-1 text-xs">
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span>Business Services &amp; Prices</span>
-                </span>
-                <span className="text-[11px] text-emerald-400 font-semibold">Done</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span>AI Employee Persona &amp; Tone</span>
-                </span>
-                <span className="text-[11px] text-emerald-400 font-semibold">Done</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span>Business Operating Hours</span>
-                </span>
-                <span className="text-[11px] text-emerald-400 font-semibold">Done</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span>Website Chat Widget Embed</span>
-                </span>
-                <span className="text-[11px] text-emerald-400 font-semibold">Ready</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300 pt-1">
-                <span className="flex items-center gap-2 text-slate-400">
-                  <div className="h-4 w-4 rounded-full border border-slate-600 flex items-center justify-center text-[9px]">
-                    5
-                  </div>
-                  <span>WhatsApp Business API</span>
-                </span>
-                <Link
-                  href="/dashboard/settings?tab=channels"
-                  className="text-[11px] font-bold text-sky-400 hover:text-sky-300"
-                >
-                  Connect →
-                </Link>
-              </div>
+            <div className="space-y-2.5">
+              {setupProgress.steps.map((step: any) => (
+                <div key={step.id} className="flex items-center justify-between text-xs">
+                  <span className={step.completed ? 'text-slate-300 font-medium' : 'text-slate-400'}>
+                    {step.label}
+                  </span>
+                  {step.completed ? (
+                    <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                    </span>
+                  ) : (
+                    <Link
+                      href="/dashboard/settings"
+                      className="text-blue-400 hover:underline font-bold text-[11px]"
+                    >
+                      Connect →
+                    </Link>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Quick Actions Card */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Actions</h3>
-
-            <div className="space-y-2">
-              <Link
-                href="/dashboard/agent"
-                className="w-full flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950 p-3.5 text-xs font-semibold text-slate-200 hover:bg-slate-900 transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Bot className="h-4 w-4 text-sky-400" />
-                  <span>Teach AI Employee / Change Tone</span>
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
-              </Link>
-
-              <Link
-                href="/dashboard/settings?tab=channels"
-                className="w-full flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950 p-3.5 text-xs font-semibold text-slate-200 hover:bg-slate-900 transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <MessageSquare className="h-4 w-4 text-emerald-400" />
-                  <span>Connect WhatsApp / Get Widget Code</span>
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
-              </Link>
-
-              <Link
-                href="/dashboard/appointments"
-                className="w-full flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950 p-3.5 text-xs font-semibold text-slate-200 hover:bg-slate-900 transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Calendar className="h-4 w-4 text-purple-400" />
-                  <span>View Upcoming Appointments</span>
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
-              </Link>
+          {/* Quick Sandbox Tester */}
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-3">
+            <div className="flex items-center gap-2 text-white font-bold text-sm">
+              <Bot className="w-4 h-4 text-blue-400" />
+              <span>Test Your AI Employee</span>
             </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Want to see how your AI answers questions or quotes prices? Test it in the live studio.
+            </p>
+            <Link
+              href="/dashboard/agent"
+              className="btn-primary w-full py-2.5 text-xs font-bold text-center"
+            >
+              Open AI Test Studio
+            </Link>
           </div>
         </div>
+
       </div>
     </div>
   );

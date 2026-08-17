@@ -21,12 +21,12 @@ export default function AgentStudioPage() {
   const [activeTab, setActiveTab] = useState<'personality' | 'services' | 'hours' | 'sandbox'>('personality');
 
   // AI Persona
-  const [name, setName] = useState('Apex Dispatch AI');
-  const [role, setRole] = useState('AI Sales & Appointment Booker');
+  const [name, setName] = useState('LeadFlow AI Assistant');
+  const [role, setRole] = useState('AI Sales & Appointment Specialist');
   const [tone, setTone] = useState<'friendly' | 'professional' | 'casual' | 'formal'>('friendly');
-  const [instructions, setInstructions] = useState('We offer 1-year warranty on all replacement parts and labor. Same-day emergency triage is prioritized for AC and heating loss in severe weather.');
+  const [instructions, setInstructions] = useState('We offer a 1-year warranty on all replacement parts and labor. Emergency dispatch is available for urgent inquiries.');
 
-  // AI Goals / Permissions
+  // AI Permissions
   const [goals, setGoals] = useState({
     answerQuestions: true,
     collectLeads: true,
@@ -36,9 +36,9 @@ export default function AgentStudioPage() {
 
   // Services & Pricing
   const [services, setServices] = useState<ServiceItem[]>([
-    { name: 'AC Emergency Diagnostic', price: '$120 Diagnostic Fee', duration: 60, description: 'Complete system inspection; waived if repair is approved.' },
-    { name: 'Seasonal HVAC Tune-Up', price: '$180 Flat Rate', duration: 60, description: '24-point electrical check, filter change, and coil cleaning.' },
-    { name: 'Tankless Water Heater Installation', price: '$2,400 - $3,800', duration: 240, description: 'Navien high-efficiency gas/electric installation.' },
+    { name: 'Diagnostic Inspection', price: '$120 Diagnostic Fee', duration: 60, description: 'Complete system inspection and diagnostic.' },
+    { name: 'Standard Maintenance', price: '$180 Flat Rate', duration: 60, description: 'Full tune-up, filter check, and electrical testing.' },
+    { name: 'Emergency Repair', price: '$250+ (Parts extra)', duration: 90, description: 'Priority immediate service dispatch.' },
   ]);
 
   // Hours
@@ -53,45 +53,40 @@ export default function AgentStudioPage() {
   });
 
   // Test Chat Sandbox
-  const [testInput, setTestInput] = useState('Hi! My AC stopped blowing cold air. How much is a checkup?');
+  const [testInput, setTestInput] = useState('Hi! How much is a diagnostic checkup?');
   const [testMessages, setTestMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
-    { sender: 'ai', text: 'Hello! I am Apex Dispatch AI. How can I assist you with your home services today?' },
+    { sender: 'ai', text: 'Hello! I am your AI sales assistant. How can I assist you with our services today?' },
   ]);
   const [testLoading, setTestLoading] = useState(false);
 
   const [saving, setSaving] = useState(false);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    // Load agent
     fetchApi('/agents/current')
       .then((data) => {
         if (data?.name) setName(data.name);
         if (data?.role) setRole(data.role);
-        if (data?.system_prompt) setInstructions(data.system_prompt);
+        if (data?.tone) setTone(data.tone);
       })
       .catch(() => {});
 
-    // Load knowledge
     fetchApi('/knowledge/')
       .then((data) => {
-        if (data?.services?.length) setServices(data.services);
-        if (data?.hours && Object.keys(data.hours).length) setHours(data.hours);
-        if (data?.policies) setInstructions(data.policies);
+        if (data?.services && data.services.length > 0) setServices(data.services);
+        if (data?.hours) setHours(data.hours);
+        if (data?.custom_prompt) setInstructions(data.custom_prompt);
       })
       .catch(() => {});
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveSuccess(false);
     try {
       await fetchApi('/agents/current', {
         method: 'PATCH',
-        body: JSON.stringify({
-          name,
-          role,
-          system_prompt: instructions,
-        }),
+        body: JSON.stringify({ name, role, tone }),
       });
 
       await fetchApi('/knowledge/', {
@@ -99,32 +94,18 @@ export default function AgentStudioPage() {
         body: JSON.stringify({
           services,
           hours,
-          policies: instructions,
+          custom_prompt: instructions,
         }),
       });
 
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3500);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch {
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3500);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleAddService = () => {
-    setServices([...services, { name: 'New Service Offering', price: '$150+', duration: 60, description: 'Description of service' }]);
-  };
-
-  const handleRemoveService = (idx: number) => {
-    setServices(services.filter((_, i) => i !== idx));
-  };
-
-  const handleUpdateService = (idx: number, field: string, val: any) => {
-    const updated = [...services];
-    (updated[idx] as any)[field] = val;
-    setServices(updated);
   };
 
   const handleSendTestMessage = async (e: React.FormEvent) => {
@@ -132,264 +113,262 @@ export default function AgentStudioPage() {
     if (!testInput.trim() || testLoading) return;
 
     const userText = testInput.trim();
-    setTestInput('');
     setTestMessages((prev) => [...prev, { sender: 'user', text: userText }]);
+    setTestInput('');
     setTestLoading(true);
 
     try {
-      const data = await fetchApi('/test-console/simulate', {
+      const res = await fetchApi('/test-console/simulate', {
         method: 'POST',
         body: JSON.stringify({ message: userText }),
       });
-      const reply = data.reply || `Hello! Our AC diagnostic fee is $120, which is fully waived if repair work is approved. Would you like me to book our earliest opening tomorrow at 10:00 AM?`;
-      setTestMessages((prev) => [...prev, { sender: 'ai', text: reply }]);
+
+      if (res?.response) {
+        setTestMessages((prev) => [...prev, { sender: 'ai', text: res.response }]);
+      } else {
+        setTestMessages((prev) => [
+          ...prev,
+          { sender: 'ai', text: `We charge ${services[0]?.price || '$120'} for standard inspection. Would you like me to book tomorrow morning for you?` },
+        ]);
+      }
     } catch {
       setTestMessages((prev) => [
         ...prev,
-        {
-          sender: 'ai',
-          text: `Hello! Our diagnostic fee is $120, which is waived if repair work is approved. We have an opening tomorrow morning at 10:00 AM. What is your contact phone number to reserve this slot?`,
-        },
+        { sender: 'ai', text: `Our diagnostic checkup is ${services[0]?.price || '$120'}. We have an open slot tomorrow at 10:00 AM if you'd like me to reserve it!` },
       ]);
     } finally {
       setTestLoading(false);
     }
   };
 
+  const addService = () => {
+    setServices([
+      ...services,
+      { name: 'New Service Item', price: '$99 Flat Rate', duration: 60, description: 'Describe what is included in this service.' },
+    ]);
+  };
+
+  const removeService = (index: number) => {
+    setServices(services.filter((_, i) => i !== index));
+  };
+
   return (
-    <div className="p-6 sm:p-10 space-y-8 max-w-6xl mx-auto">
-      {/* Header */}
+    <div className="p-6 sm:p-8 lg:p-10 space-y-8 max-w-5xl mx-auto animate-fade-in">
+      {/* Top Title & Save Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Teach Your AI Employee</h1>
-          <p className="text-xs text-slate-400">
-            Tell your AI employee how to speak to customers, what services you offer, and what rules to follow.
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">AI Employee Studio</h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Customize your AI employee&apos;s speaking style, services, prices, and test live in real-time.
           </p>
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 transition active:scale-95 disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          <span>{saving ? 'Saving changes...' : 'Save AI Settings'}</span>
-        </button>
-      </div>
-
-      {savedSuccess && (
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4" />
-          <span>Your AI employee has been trained with your latest instructions and pricing!</span>
+        <div className="flex items-center gap-3">
+          {saveSuccess && (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Saved &amp; Updated!</span>
+            </div>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary py-2.5 px-5 text-xs"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+          </button>
         </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-800 pb-3 text-xs font-semibold overflow-x-auto">
-        {[
-          { id: 'personality', label: '1. Speaking Style & Persona', icon: Bot },
-          { id: 'services', label: '2. Services & Pricing', icon: Wrench },
-          { id: 'hours', label: '3. Operating Hours', icon: Clock },
-          { id: 'sandbox', label: '4. Live Test Chat', icon: Sparkles },
-        ].map((t) => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 transition whitespace-nowrap ${
-                isActive
-                  ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/20'
-                  : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{t.label}</span>
-            </button>
-          );
-        })}
       </div>
 
-      {/* TAB 1: SPEAKING STYLE & PERSONA */}
-      {activeTab === 'personality' && (
-        <div className="space-y-6 max-w-3xl">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-6">
-            <h2 className="text-base font-bold text-white">AI Employee Identity</h2>
+      {/* Navigation Tabs */}
+      <div className="flex border-b border-slate-800 gap-2 overflow-x-auto pb-px">
+        {[
+          { id: 'personality', label: '1. Speaking Style & Persona' },
+          { id: 'services', label: '2. Services & Pricing' },
+          { id: 'hours', label: '3. Business Hours' },
+          { id: 'sandbox', label: '4. Live Test Chat' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === tab.id
+                ? 'border-blue-500 text-white font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* TAB 1: Personality */}
+      {activeTab === 'personality' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-6">
+            <h2 className="text-base font-bold text-white tracking-tight">AI Identity &amp; Persona</h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold text-slate-300">What should customers call your AI?</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  AI Employee Name
+                </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Apex Helper"
-                  className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                  placeholder="e.g. Sarah from Apex Air"
+                  className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300">AI Job Title</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Job Role / Title
+                </label>
                 <input
                   type="text"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  placeholder="e.g. Customer Assistant & Booking Specialist"
-                  className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                  placeholder="e.g. Sales & Dispatch Specialist"
+                  className="input-field"
                 />
               </div>
             </div>
 
-            {/* Speaking Tone */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-2">How should your AI speak to customers?</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                Speaking Tone
+              </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { id: 'friendly', label: 'Friendly & Warm', icon: '😊' },
-                  { id: 'professional', label: 'Professional', icon: '👔' },
-                  { id: 'casual', label: 'Casual & Relaxed', icon: '💬' },
-                  { id: 'formal', label: 'Formal & Direct', icon: '🏛️' },
-                ].map((t) => {
-                  const isSelected = tone === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTone(t.id as any)}
-                      className={`rounded-2xl p-4 text-center border transition ${
-                        isSelected
-                          ? 'border-sky-500 bg-sky-500/10 text-white font-bold'
-                          : 'border-slate-800 bg-slate-950 text-slate-400 hover:bg-slate-900'
-                      }`}
-                    >
-                      <div className="text-2xl mb-1">{t.icon}</div>
-                      <div className="text-xs">{t.label}</div>
-                    </button>
-                  );
-                })}
+                  { id: 'friendly', label: 'Friendly & Warm', desc: 'Approachable and helpful' },
+                  { id: 'professional', label: 'Professional', desc: 'Direct, clear, and courteous' },
+                  { id: 'casual', label: 'Casual & Upbeat', desc: 'Fast, modern, conversational' },
+                  { id: 'formal', label: 'Formal', desc: 'Polished for law and clinical' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTone(t.id as any)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all duration-150 ${
+                      tone === t.id
+                        ? 'border-blue-500/60 bg-blue-500/10 text-white shadow-sm'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-white">{t.label}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{t.desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* What AI helps with */}
-            <div className="space-y-3 pt-2">
-              <label className="block text-xs font-semibold text-slate-300">What do you want your AI to help with?</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { key: 'answerQuestions', title: 'Answer Questions', desc: 'Pricing, warranty, and service FAQs' },
-                  { key: 'collectLeads', title: 'Collect Details', desc: 'Name, phone number, problem urgency' },
-                  { key: 'bookAppointments', title: 'Book Appointments', desc: 'Check open calendar slots & confirm visits' },
-                  { key: 'sendFollowUps', title: 'Follow Up', desc: 'Re-engage quiet leads automatically' },
-                ].map((g) => {
-                  const isActive = (goals as any)[g.key];
-                  return (
-                    <div
-                      key={g.key}
-                      onClick={() => setGoals({ ...goals, [g.key]: !isActive })}
-                      className={`rounded-2xl p-3.5 border cursor-pointer flex items-center justify-between transition ${
-                        isActive ? 'border-sky-500/40 bg-sky-500/5' : 'border-slate-800 bg-slate-950 opacity-60'
-                      }`}
-                    >
-                      <div>
-                        <div className="text-xs font-bold text-white">{g.title}</div>
-                        <div className="text-[11px] text-slate-400">{g.desc}</div>
-                      </div>
-                      <div
-                        className={`h-5 w-5 rounded-lg flex items-center justify-center text-xs font-bold ${
-                          isActive ? 'bg-sky-600 text-white' : 'bg-slate-800 text-transparent'
-                        }`}
-                      >
-                        ✓
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Plain English Custom Instructions */}
-            <div className="pt-2">
-              <label className="block text-xs font-semibold text-slate-300">
-                Special Company Rules &amp; Notes (In your own words)
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                Special Rules or Instructions for Your AI
               </label>
-              <p className="text-[11px] text-slate-400 mb-2">
-                Your AI employee will strictly follow these instructions when answering customers.
-              </p>
               <textarea
-                rows={4}
+                rows={3}
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="e.g. We offer free parking behind our building. 10% discount for veterans. Never quote installation on commercial boilers without a site visit."
-                className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none leading-relaxed"
+                placeholder="e.g. We give a 10% discount to seniors. We do not service commercial units."
+                className="input-field leading-relaxed resize-none"
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 2: SERVICES & PRICING */}
+      {/* TAB 2: Services & Prices */}
       {activeTab === 'services' && (
-        <div className="space-y-6 max-w-3xl">
+        <div className="space-y-4 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-white">Your Services &amp; Prices</h2>
-              <p className="text-xs text-slate-400">The AI uses these exact offerings when quoting customers.</p>
+              <h2 className="text-base font-bold text-white">Services &amp; Pricing Menu</h2>
+              <p className="text-xs text-slate-400">Your AI references these exact prices when speaking with customers.</p>
             </div>
-
             <button
-              onClick={handleAddService}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-500 transition"
+              onClick={addService}
+              className="btn-secondary py-2 px-3 text-xs"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Add Service</span>
             </button>
           </div>
 
-          <div className="space-y-4">
-            {services.map((srv, idx) => (
+          <div className="space-y-3">
+            {services.map((svc, idx) => (
               <div
                 key={idx}
-                className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4 relative"
+                className="rounded-2xl border border-slate-800/80 bg-[#0e131f] p-4 sm:p-5 space-y-3"
               >
-                <button
-                  onClick={() => handleRemoveService(idx)}
-                  className="absolute right-4 top-4 text-slate-500 hover:text-rose-400 transition"
-                  title="Remove this service"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-400">Service Name</label>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-5">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Service Name</label>
                     <input
                       type="text"
-                      value={srv.name}
-                      onChange={(e) => handleUpdateService(idx, 'name', e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
+                      value={svc.name}
+                      onChange={(e) => {
+                        const updated = [...services];
+                        updated[idx].name = e.target.value;
+                        setServices(updated);
+                      }}
+                      className="input-field"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-400">Starting Price</label>
+                  <div className="sm:col-span-4">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Price / Fee</label>
                     <input
                       type="text"
-                      value={srv.price}
-                      onChange={(e) => handleUpdateService(idx, 'price', e.target.value)}
-                      placeholder="e.g. $120 Flat Rate or $250+"
-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
+                      value={svc.price}
+                      onChange={(e) => {
+                        const updated = [...services];
+                        updated[idx].price = e.target.value;
+                        setServices(updated);
+                      }}
+                      className="input-field"
                     />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Duration (Min)</label>
+                    <input
+                      type="number"
+                      value={svc.duration || 60}
+                      onChange={(e) => {
+                        const updated = [...services];
+                        updated[idx].duration = parseInt(e.target.value) || 60;
+                        setServices(updated);
+                      }}
+                      className="input-field"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-1 flex items-end justify-end pb-1">
+                    <button
+                      onClick={() => removeService(idx)}
+                      className="text-slate-500 hover:text-rose-400 p-2 transition-colors"
+                      title="Delete service"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400">Description (What is included)</label>
+                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">What&apos;s Included (Description)</label>
                   <input
                     type="text"
-                    value={srv.description}
-                    onChange={(e) => handleUpdateService(idx, 'description', e.target.value)}
-                    placeholder="Short description of what the technician or team does."
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
+                    value={svc.description}
+                    onChange={(e) => {
+                      const updated = [...services];
+                      updated[idx].description = e.target.value;
+                      setServices(updated);
+                    }}
+                    className="input-field"
                   />
                 </div>
               </div>
@@ -398,118 +377,139 @@ export default function AgentStudioPage() {
         </div>
       )}
 
-      {/* TAB 3: OPERATING HOURS */}
+      {/* TAB 3: Business Hours */}
       {activeTab === 'hours' && (
-        <div className="space-y-6 max-w-3xl">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-white">Business Operating Schedule</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Your AI employee uses these hours to let customers know when you are open for appointments.
-              </p>
-            </div>
+        <div className="space-y-4 animate-fade-in">
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-4">
+            <h2 className="text-base font-bold text-white">Operating Schedule</h2>
+            <p className="text-xs text-slate-400">Your AI only schedules appointments during these available operating hours.</p>
 
-            <div className="space-y-3">
-              {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
-                const dayConfig = hours[day] || { open: '08:00', close: '18:00', closed: false };
-                return (
-                  <div
-                    key={day}
-                    className="rounded-2xl border border-slate-800 bg-slate-950 p-4 flex items-center justify-between text-xs"
-                  >
-                    <span className="font-bold text-white capitalize w-28">{day}</span>
+            <div className="space-y-2.5 pt-2">
+              {Object.entries(hours).map(([day, val]) => (
+                <div
+                  key={day}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-xs"
+                >
+                  <span className="font-bold text-white capitalize w-28">{day}</span>
 
-                    <div className="flex items-center gap-3">
-                      <span className="text-sky-400 font-mono">
-                        {dayConfig.closed ? 'Closed' : `${dayConfig.open} – ${dayConfig.close}`}
-                      </span>
+                  <div className="flex items-center gap-3">
+                    {!val.closed ? (
+                      <>
+                        <input
+                          type="time"
+                          value={val.open}
+                          onChange={(e) => {
+                            setHours({ ...hours, [day]: { ...val, open: e.target.value } });
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                        />
+                        <span className="text-slate-500">to</span>
+                        <input
+                          type="time"
+                          value={val.close}
+                          onChange={(e) => {
+                            setHours({ ...hours, [day]: { ...val, close: e.target.value } });
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                        />
+                      </>
+                    ) : (
+                      <span className="text-slate-500 italic px-4">Closed</span>
+                    )}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setHours({
-                            ...hours,
-                            [day]: { ...dayConfig, closed: !dayConfig.closed },
-                          });
-                        }}
-                        className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                          dayConfig.closed
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        }`}
-                      >
-                        {dayConfig.closed ? 'Closed' : 'Open'}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHours({ ...hours, [day]: { ...val, closed: !val.closed } });
+                      }}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${
+                        val.closed ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {val.closed ? 'Open' : 'Close'}
+                    </button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 4: LIVE TEST CHAT */}
+      {/* TAB 4: Live Test Chat Sandbox */}
       {activeTab === 'sandbox' && (
-        <div className="space-y-6 max-w-3xl">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-400" />
-                <span>Live Test Sandbox</span>
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Send test messages to verify your AI employee answers with your exact services, prices, and tone.
-              </p>
-            </div>
-
-            {/* Chat Box */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-              <div className="h-64 overflow-y-auto space-y-3 p-2">
-                {testMessages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                        msg.sender === 'user'
-                          ? 'bg-sky-600 text-white rounded-tr-sm'
-                          : 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700'
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
-                {testLoading && (
-                  <div className="flex justify-start">
-                    <div className="rounded-2xl bg-slate-800 px-4 py-2 text-xs text-slate-400 animate-pulse">
-                      {name} is typing...
-                    </div>
-                  </div>
-                )}
+        <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-sm">
+                <Bot className="w-4 h-4" />
               </div>
-
-              {/* Input Form */}
-              <form onSubmit={handleSendTestMessage} className="flex gap-2 pt-2 border-t border-slate-800">
-                <input
-                  type="text"
-                  value={testInput}
-                  onChange={(e) => setTestInput(e.target.value)}
-                  placeholder="Type a test customer message..."
-                  className="flex-1 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={testLoading || !testInput.trim()}
-                  className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-500 disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </form>
+              <div>
+                <h3 className="text-sm font-bold text-white">{name} — Live Test Sandbox</h3>
+                <p className="text-[10px] text-slate-400">Ask questions as if you were a customer to test replies and pricing.</p>
+              </div>
             </div>
+
+            <button
+              onClick={() => {
+                setTestMessages([
+                  { sender: 'ai', text: `Hello! I am ${name}. How can I assist you today?` },
+                ]);
+              }}
+              className="text-xs text-slate-400 hover:text-white transition-colors"
+            >
+              Reset Chat
+            </button>
           </div>
+
+          {/* Chat Stream */}
+          <div className="h-72 overflow-y-auto space-y-3 p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80">
+            {testMessages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                    msg.sender === 'user'
+                      ? 'bg-blue-600 text-white font-medium'
+                      : 'bg-slate-900 text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+
+            {testLoading && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl px-4 py-3 bg-slate-900 border border-slate-800 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 typing-dot" />
+                  <span className="w-2 h-2 rounded-full bg-blue-400 typing-dot" />
+                  <span className="w-2 h-2 rounded-full bg-blue-400 typing-dot" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <form onSubmit={handleSendTestMessage} className="flex gap-2">
+            <input
+              type="text"
+              value={testInput}
+              onChange={(e) => setTestInput(e.target.value)}
+              placeholder="Type a test customer message..."
+              className="input-field"
+            />
+            <button
+              type="submit"
+              disabled={testLoading || !testInput.trim()}
+              className="btn-primary shrink-0 py-2.5 px-4 text-xs font-bold"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Send</span>
+            </button>
+          </form>
         </div>
       )}
     </div>

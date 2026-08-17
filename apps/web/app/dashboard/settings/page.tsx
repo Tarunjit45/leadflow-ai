@@ -31,9 +31,9 @@ function SettingsContent() {
   const [activeTab, setActiveTab] = useState<string>('profile');
 
   // Business Profile State
-  const [bizName, setBizName] = useState('Apex Air & Plumbing Specialists');
+  const [bizName, setBizName] = useState('My Business Workspace');
   const [phone, setPhone] = useState('+1 (512) 555-0149');
-  const [address, setAddress] = useState('4200 North Lamar Blvd, Austin, TX 78756');
+  const [address, setAddress] = useState('Austin, TX');
   const [timezone, setTimezone] = useState('America/Chicago');
   const [avgJobValue, setAvgJobValue] = useState<number>(850);
 
@@ -58,28 +58,25 @@ function SettingsContent() {
     appointments_limit: 250,
   });
 
-  // Account State
-  const [userName, setUserName] = useState('Alex Morgan');
-  const [userEmail, setUserEmail] = useState('alex@apexcomfort.com');
+  // Password Change
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [pwdStatus, setPwdStatus] = useState('');
 
-  // Advanced Tech settings toggle
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Danger Zone Modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
-  // Status & Notification
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const widgetSnippet = `<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://leadflow.ai'}/api/v1/widget/embed.js" data-business-id="biz_current"></script>`;
+  // Diagnostics
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam) {
-      setActiveTab(tabParam);
-    }
+    if (tabParam) setActiveTab(tabParam);
 
-    // Load business
     fetchApi('/businesses/current')
       .then((data) => {
         if (data?.name) setBizName(data.name);
@@ -90,32 +87,14 @@ function SettingsContent() {
       })
       .catch(() => {});
 
-    // Load subscription
     fetchApi('/billing/subscription')
       .then((data) => {
-        if (data?.plan_tier) setSub(data);
+        if (data) setSub(data);
       })
       .catch(() => {});
-
-    // Load user
-    const cachedUser = localStorage.getItem('leadflow_user');
-    if (cachedUser) {
-      try {
-        const u = JSON.parse(cachedUser);
-        if (u.name) setUserName(u.name);
-        if (u.email) setUserEmail(u.email);
-      } catch {}
-    }
   }, [searchParams]);
 
-  const showNotification = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
-  };
-
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+  const handleSaveProfile = async () => {
     try {
       await fetchApi('/businesses/current', {
         method: 'PATCH',
@@ -127,553 +106,423 @@ function SettingsContent() {
           average_job_value: avgJobValue,
         }),
       });
-      showNotification('✓ Business profile saved successfully!');
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
     } catch {
-      showNotification('✓ Business profile saved.');
-    } finally {
-      setSaving(false);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
     }
   };
 
-  const handleSaveAccount = async (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    try {
-      await fetchApi('/auth/profile', {
-        method: 'PATCH',
-        body: JSON.stringify({ name: userName, email: userEmail }),
-      });
-
-      if (currentPassword && newPassword) {
-        await fetchApi('/auth/password', {
-          method: 'PATCH',
-          body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-        });
-        setCurrentPassword('');
-        setNewPassword('');
-      }
-
-      showNotification('✓ Account details updated successfully!');
-    } catch (err: any) {
-      showNotification(err.message || 'Error updating account.');
-    } finally {
-      setSaving(false);
+    if (newPassword !== confirmNewPassword) {
+      setPwdStatus('New passwords do not match.');
+      return;
     }
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(widgetSnippet);
-    setCopiedSnippet(true);
-    setTimeout(() => setCopiedSnippet(false), 2000);
-  };
-
-  const handleCheckout = async (tier: string) => {
     try {
-      await fetchApi('/billing/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ plan_tier: tier }),
+      await fetchApi('/auth/password', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
       });
-      setSub((prev: any) => ({ ...prev, plan_tier: tier, amount: tier === 'growth' ? 199 : 99 }));
-      showNotification(`Switched to ${tier.toUpperCase()} plan!`);
-    } catch {
-      showNotification(`Switched to ${tier.toUpperCase()} plan.`);
+      setPwdStatus('Password updated successfully! All other sessions revoked.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err: any) {
+      setPwdStatus(err.message || 'Failed to update password.');
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm('Are you absolutely sure you want to delete your business workspace and account? This cannot be undone.')) return;
+    if (deleteConfirmText !== 'DELETE') return;
+    setDeleting(true);
     try {
       await fetchApi('/auth/account', { method: 'DELETE' });
       localStorage.clear();
-      window.location.href = '/';
-    } catch {
-      localStorage.clear();
-      window.location.href = '/';
+      window.location.href = '/signup';
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete account.');
+      setDeleting(false);
     }
   };
 
-  return (
-    <div className="p-6 sm:p-10 space-y-8 max-w-5xl mx-auto">
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 rounded-2xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-2xl flex items-center gap-2 border border-emerald-400/40">
-          <CheckCircle2 className="h-4 w-4" />
-          <span>{toast}</span>
-        </div>
-      )}
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://leadflow.ai';
+  const embedCode = `<!-- LeadFlow AI Website Chat Embed -->\n<script src="${currentOrigin}/api/v1/widget/embed.js" data-business-id="biz_current" async></script>`;
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Settings &amp; Channels</h1>
-        <p className="text-xs text-slate-400">
-          Manage your business details, connected customer channels, billing, and account preferences.
-        </p>
+  const copyEmbedSnippet = () => {
+    navigator.clipboard.writeText(embedCode);
+    setCopiedSnippet(true);
+    setTimeout(() => setCopiedSnippet(false), 2500);
+  };
+
+  return (
+    <div className="p-6 sm:p-8 lg:p-10 space-y-8 max-w-5xl mx-auto animate-fade-in">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Settings &amp; Channels</h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Manage your company profile, connected channels, billing, and workspace security.
+          </p>
+        </div>
+
+        {savedSuccess && (
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Settings Saved!</span>
+          </div>
+        )}
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 border-b border-slate-800 pb-3 text-xs font-semibold overflow-x-auto">
+      <div className="flex border-b border-slate-800 gap-2 overflow-x-auto pb-px">
         {[
-          { id: 'profile', label: 'Business Profile', icon: Building },
+          { id: 'profile', label: 'Company Profile', icon: Building },
           { id: 'channels', label: 'Connected Channels', icon: MessageSquare },
-          { id: 'followups', label: 'Follow-Up Rules', icon: Clock },
+          { id: 'followups', label: 'Smart Follow-ups', icon: Sliders },
           { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
-          { id: 'account', label: 'Account & Security', icon: User },
-        ].map((t) => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.id;
+          { id: 'security', label: 'Account & Security', icon: Lock },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+
           return (
             <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 transition whitespace-nowrap ${
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
                 isActive
-                  ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/20'
-                  : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                  ? 'border-blue-500 text-white font-bold'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Icon className="h-4 w-4" />
-              <span>{t.label}</span>
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+              <span>{tab.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* TAB 1: BUSINESS PROFILE */}
+      {/* TAB 1: Profile */}
       {activeTab === 'profile' && (
-        <form onSubmit={handleSaveProfile} className="space-y-6 max-w-3xl">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-4">
-            <h2 className="text-base font-bold text-white">Business Identity</h2>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300">Company / Clinic Name</label>
-              <input
-                type="text"
-                value={bizName}
-                onChange={(e) => setBizName(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-              />
-            </div>
+        <div className="space-y-6 animate-fade-in">
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-5">
+            <h2 className="text-base font-bold text-white">Business Information</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300">Dispatch / Contact Phone</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Business Name</label>
                 <input
                   type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                  value={bizName}
+                  onChange={(e) => setBizName(e.target.value)}
+                  className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300">Timezone</label>
-                <select
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                >
-                  <option value="America/New_York">Eastern Time (ET)</option>
-                  <option value="America/Chicago">Central Time (CT)</option>
-                  <option value="America/Denver">Mountain Time (MT)</option>
-                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                  <option value="Europe/London">London (GMT/BST)</option>
-                  <option value="Asia/Kolkata">India (IST)</option>
-                </select>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Business Phone Number</label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Service Area Address</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Average Job Value ($)</label>
+                <input
+                  type="number"
+                  value={avgJobValue}
+                  onChange={(e) => setAvgJobValue(parseFloat(e.target.value) || 0)}
+                  className="input-field"
+                />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300">Physical Business Address / Service Depot</label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300">
-                Average Value per Completed Job ($)
-              </label>
-              <p className="text-[11px] text-slate-400 mb-1">
-                Used to calculate estimated revenue saved from missed inquiries on your Home screen.
-              </p>
-              <input
-                type="number"
-                value={avgJobValue}
-                onChange={(e) => setAvgJobValue(Number(e.target.value))}
-                className="w-full sm:w-48 rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="pt-2">
+            <div className="pt-2 flex justify-end">
               <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 transition active:scale-95 disabled:opacity-50"
+                onClick={handleSaveProfile}
+                className="btn-primary py-2.5 px-6 text-xs"
               >
-                <Save className="h-4 w-4" />
-                <span>Save Business Profile</span>
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Profile Changes</span>
               </button>
             </div>
-          </div>
-        </form>
-      )}
-
-      {/* TAB 2: CONNECTED CHANNELS */}
-      {activeTab === 'channels' && (
-        <div className="space-y-6 max-w-3xl">
-          {/* Website Chat Widget */}
-          <div className="rounded-3xl border border-sky-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/40 p-6 sm:p-8 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-600 text-white">
-                  <Code className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Website Chat Widget</h3>
-                  <span className="text-[11px] text-emerald-400 font-semibold">✓ Active &amp; Ready to Embed</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleCopyCode}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-500 transition shadow-md shadow-sky-600/20"
-              >
-                {copiedSnippet ? <Check className="h-4 w-4 text-emerald-300" /> : <Copy className="h-4 w-4" />}
-                <span>{copiedSnippet ? 'Copied!' : 'Copy Code'}</span>
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Paste this one line into your website HTML or CMS (WordPress, Webflow, Squarespace, Wix) right before &lt;/body&gt;:
-            </p>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 font-mono text-xs text-sky-300 overflow-x-auto">
-              {widgetSnippet}
-            </div>
-          </div>
-
-          {/* WhatsApp Channel */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 flex-shrink-0">
-                <MessageSquare className="h-5 w-5" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white">Official WhatsApp Business</h3>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
-                    Connected
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Your AI employee replies to customers on your WhatsApp number in under 2 seconds.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setWaConnected(!waConnected);
-                showNotification(waConnected ? 'WhatsApp disconnected' : 'WhatsApp connected');
-              }}
-              className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition flex-shrink-0"
-            >
-              {waConnected ? 'Disconnect' : 'Connect'}
-            </button>
-          </div>
-
-          {/* Google Calendar */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-400 flex-shrink-0">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white">Google Calendar</h3>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
-                    Synced
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Checks your open schedule and locks in confirmed appointments without double-booking.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setCalConnected(!calConnected);
-                showNotification(calConnected ? 'Calendar disconnected' : 'Google Calendar connected');
-              }}
-              className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition flex-shrink-0"
-            >
-              {calConnected ? 'Disconnect' : 'Connect'}
-            </button>
           </div>
         </div>
       )}
 
-      {/* TAB 3: FOLLOW-UP RULES */}
-      {activeTab === 'followups' && (
-        <div className="space-y-6 max-w-3xl">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-white">Automated Customer Follow-Up Rules</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Automatically follow up with interested customers who asked about pricing but went quiet.
-              </p>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                <label className="block font-bold text-white">First Follow-Up Delay</label>
-                <p className="text-[11px] text-slate-400">How long should your AI wait before sending a friendly check-in message?</p>
-                <select
-                  value={followUpDelayHours}
-                  onChange={(e) => setFollowUpDelayHours(Number(e.target.value))}
-                  className="rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-white"
-                >
-                  <option value={12}>After 12 Hours</option>
-                  <option value={24}>After 24 Hours (Recommended)</option>
-                  <option value={48}>After 48 Hours</option>
-                </select>
+      {/* TAB 2: Channels */}
+      {activeTab === 'channels' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* WhatsApp Channel Card */}
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">WhatsApp Business Cloud API</h3>
+                  <p className="text-xs text-slate-400">Allows AI to receive customer messages and send instant quotes.</p>
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 flex items-center justify-between">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
+                Connected
+              </span>
+            </div>
+          </div>
+
+          {/* Website Chat Widget Embed */}
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold">
+                  <Code className="w-5 h-5" />
+                </div>
                 <div>
-                  <div className="font-bold text-white">Stop follow-ups immediately upon booking</div>
-                  <div className="text-[11px] text-slate-400">Never annoy customers once they have scheduled an appointment.</div>
+                  <h3 className="text-sm font-bold text-white">Website Live Chat Widget</h3>
+                  <p className="text-xs text-slate-400">Copy this 1-line script onto your website to enable AI chat.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={copyEmbedSnippet}
+                className="btn-secondary py-2 px-3 text-xs"
+              >
+                {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedSnippet ? 'Copied!' : 'Copy Script'}</span>
+              </button>
+            </div>
+
+            <pre className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 text-xs text-blue-300 font-mono overflow-x-auto">
+              {embedCode}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: Smart Follow-ups */}
+      {activeTab === 'followups' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-6">
+            <h2 className="text-base font-bold text-white">Automated Lead Recovery Cadence</h2>
+
+            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white">Stop Follow-ups Once Booked</div>
+                  <div className="text-slate-400 text-[11px]">Automatically halts sequences when customer confirms appointment.</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={stopOnBooking}
                   onChange={(e) => setStopOnBooking(e.target.checked)}
-                  className="h-5 w-5 rounded accent-sky-600"
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500/30"
                 />
               </div>
             </div>
 
-            <button
-              onClick={() => showNotification('✓ Follow-up rules saved!')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 transition"
-            >
-              <Save className="h-4 w-4" />
-              <span>Save Rules</span>
-            </button>
+            <div className="space-y-3 text-xs">
+              <div className="font-bold text-white">3-Stage Follow-Up Sequence:</div>
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-blue-400 font-bold">Stage 1 (+24 Hours):</span>
+                <p className="text-slate-300">&ldquo;Hi Sarah, checking in to see if you still needed help with your AC checkup tomorrow.&rdquo;</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-blue-400 font-bold">Stage 2 (+72 Hours):</span>
+                <p className="text-slate-300">&ldquo;Hi Sarah, we have an open dispatch opening this Thursday morning if you&apos;d like us to hold the slot for you.&rdquo;</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-blue-400 font-bold">Stage 3 (+7 Days):</span>
+                <p className="text-slate-300">&ldquo;Hi Sarah, friendly reminder that our service team is available whenever you&apos;re ready. Have a great week!&rdquo;</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* TAB 4: BILLING & PLAN */}
+      {/* TAB 4: Billing */}
       {activeTab === 'billing' && (
-        <div className="space-y-6 max-w-3xl">
-          {/* Current Plan Card */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-4">
+        <div className="space-y-6 animate-fade-in">
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Your Plan</span>
-                <div className="flex items-center gap-2 mt-1">
-                  <h2 className="text-2xl font-bold text-white capitalize">{sub.plan_tier} Plan</h2>
-                  <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/30 capitalize">
-                    {sub.status}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-extrabold text-white">${sub.amount}</div>
-                <div className="text-xs text-slate-400">per month</div>
-              </div>
-            </div>
-
-            {/* Quota Progress */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between text-slate-300">
-                  <span>AI Messages:</span>
-                  <span className="font-bold text-sky-400">{sub.messages_count} / {sub.messages_limit}</span>
-                </div>
-                <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-sky-500 rounded-full"
-                    style={{ width: `${Math.round((sub.messages_count / sub.messages_limit) * 100)}%` }}
-                  />
-                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold uppercase">
+                  {sub.plan_tier || 'Growth'} Plan
+                </span>
+                <h2 className="text-2xl font-extrabold text-white mt-2">${sub.amount || 199} <span className="text-xs font-normal text-slate-400">/ month</span></h2>
               </div>
 
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between text-slate-300">
-                  <span>Calendar Bookings:</span>
-                  <span className="font-bold text-emerald-400">{sub.appointments_count} / {sub.appointments_limit}</span>
-                </div>
-                <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full"
-                    style={{ width: `${Math.round((sub.appointments_count / sub.appointments_limit) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Upgrade / Change Plan */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between space-y-4">
-              <div>
-                <h3 className="font-bold text-white text-base">Starter Plan</h3>
-                <div className="text-2xl font-extrabold text-white mt-1">$99<span className="text-xs text-slate-400 font-normal">/mo</span></div>
-                <p className="text-xs text-slate-400 mt-2">1,000 AI messages, WhatsApp + Website Chat, 100 calendar appointments.</p>
-              </div>
-              <button
-                onClick={() => handleCheckout('starter')}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700 transition"
-              >
-                {sub.plan_tier === 'starter' ? 'Current Plan' : 'Switch to Starter'}
+              <button className="btn-primary py-2 px-5 text-xs">
+                Manage Subscription
               </button>
             </div>
 
-            <div className="rounded-3xl border-2 border-sky-500 bg-slate-900/90 p-6 flex flex-col justify-between space-y-4 shadow-xl shadow-sky-500/10">
-              <div>
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-white text-base">Growth Plan</h3>
-                  <span className="rounded-full bg-sky-500 px-2 py-0.5 text-[9px] font-bold text-white uppercase">Popular</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800/80">
+              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Monthly AI Messages</span>
+                  <span className="text-white font-bold">{sub.messages_count || 342} / {sub.messages_limit || 2500}</span>
                 </div>
-                <div className="text-2xl font-extrabold text-white mt-1">$199<span className="text-xs text-slate-400 font-normal">/mo</span></div>
-                <p className="text-xs text-slate-400 mt-2">2,500 AI messages, 250 calendar appointments, priority AI response speed.</p>
+                <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-blue-500 h-full rounded-full" style={{ width: '15%' }} />
+                </div>
               </div>
-              <button
-                onClick={() => handleCheckout('growth')}
-                className="w-full rounded-xl bg-sky-600 py-2.5 text-xs font-bold text-white hover:bg-sky-500 shadow-md shadow-sky-600/30 transition"
-              >
-                {sub.plan_tier === 'growth' ? 'Current Plan' : 'Upgrade to Growth'}
-              </button>
+
+              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Monthly Bookings</span>
+                  <span className="text-white font-bold">{sub.appointments_count || 19} / {sub.appointments_limit || 250}</span>
+                </div>
+                <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: '8%' }} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 5: ACCOUNT & SECURITY */}
-      {activeTab === 'account' && (
-        <form onSubmit={handleSaveAccount} className="space-y-6 max-w-3xl">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-4">
-            <h2 className="text-base font-bold text-white">Your Account Details</h2>
+      {/* TAB 5: Account & Security */}
+      {activeTab === 'security' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Password Change */}
+          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-4">
+            <h2 className="text-base font-bold text-white">Change Workspace Password</h2>
+            <p className="text-xs text-slate-400">Updating your password will immediately revoke all other active sessions across devices.</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {pwdStatus && (
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold">
+                {pwdStatus}
+              </div>
+            )}
+
+            <form onSubmit={handleUpdatePassword} className="space-y-3 max-w-md">
               <div>
-                <label className="block text-xs font-semibold text-slate-300">Your Full Name</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Current Password</label>
                 <input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300">Login Email Address</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">New Password (8+ characters)</label>
                 <input
-                  type="email"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="input-field"
                 />
               </div>
-            </div>
 
-            {/* Change Password */}
-            <div className="pt-4 border-t border-slate-800 space-y-3">
-              <h3 className="text-xs font-bold text-white">Change Password</h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] text-slate-400 font-semibold">Current Password</label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] text-slate-400 font-semibold">New Password</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  className="input-field"
+                />
               </div>
+
+              <button type="submit" className="btn-primary py-2.5 px-5 text-xs font-bold">
+                Update Password
+              </button>
+            </form>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="rounded-3xl border border-rose-500/25 bg-rose-500/5 p-6 sm:p-8 space-y-4">
+            <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+              <Trash2 className="w-4 h-4" />
+              <span>Danger Zone — Delete Workspace</span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
+              Permanently deletes your business profile, customer conversation history, and AI employee configuration. This action cannot be undone.
+            </p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="px-4 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition-all duration-150"
+            >
+              Delete My Workspace &amp; Account
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-rose-500/30 bg-[#0e131f] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-rose-400 font-bold text-base">
+              <AlertTriangle className="w-5 h-5" />
+              <span>Permanently Delete Account?</span>
             </div>
 
-            <div className="pt-2">
+            <p className="text-xs text-slate-300 leading-relaxed">
+              This will permanently delete your workspace for <strong>{bizName}</strong>, all customer dossiers, and all integration tokens.
+            </p>
+
+            <div className="space-y-1.5 text-xs pt-2">
+              <label className="block text-slate-400 text-[11px]">Type <strong>DELETE</strong> to confirm:</label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="input-field border-rose-500/30 text-rose-300"
+              />
+            </div>
+
+            <div className="pt-3 flex justify-end gap-2">
               <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-sky-600/30 hover:bg-sky-500 transition active:scale-95 disabled:opacity-50"
+                onClick={() => setShowDeleteModal(false)}
+                className="btn-secondary py-2 px-4 text-xs"
               >
-                <Save className="h-4 w-4" />
-                <span>Update Account</span>
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || deleting}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors disabled:opacity-40"
+              >
+                {deleting ? 'Deleting...' : 'Permanently Delete'}
               </button>
             </div>
           </div>
-
-          {/* Danger Zone: Delete Account */}
-          <div className="rounded-3xl border border-rose-500/30 bg-rose-500/5 p-6 sm:p-8 space-y-4">
-            <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
-              <AlertTriangle className="h-4 w-4" />
-              <span>Danger Zone</span>
-            </div>
-            <p className="text-xs text-slate-300">
-              Permanently delete this business workspace, conversation history, and account.
-            </p>
-            <button
-              type="button"
-              onClick={handleDeleteAccount}
-              className="inline-flex items-center gap-2 rounded-xl bg-rose-600/20 border border-rose-500/40 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-600/30 transition"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span>Delete Workspace &amp; Account</span>
-            </button>
-          </div>
-        </form>
+        </div>
       )}
-
-      {/* Advanced Technical Controls (Collapsible) */}
-      <div className="pt-6 border-t border-slate-800/80 max-w-3xl">
-        <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition"
-        >
-          <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180 text-sky-400' : ''}`} />
-          <span>{showAdvanced ? 'Hide Technical Diagnostics' : 'Show Advanced Developer Settings (Technical)'}</span>
-        </button>
-
-        {showAdvanced && (
-          <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-900/60 p-6 space-y-4 text-xs font-mono text-slate-300 animate-fade-in">
-            <div className="font-bold text-white font-sans text-sm">System &amp; API Configuration</div>
-            <div className="space-y-2">
-              <div>Backend Status: <span className="text-emerald-400">Healthy (200 OK)</span></div>
-              <div>AI Provider Engine: <span className="text-sky-400">OpenRouter (google/gemini-2.0-flash-001)</span></div>
-              <div>Database Engine: <span className="text-sky-400">PostgreSQL / SQLite Isolated Schema</span></div>
-              <div>Webhook Receiver: <span className="text-slate-400">/api/v1/webhooks/whatsapp</span></div>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-xs text-slate-400">Loading settings...</div>}>
+    <Suspense fallback={<div className="p-8 text-xs text-slate-500">Loading settings...</div>}>
       <SettingsContent />
     </Suspense>
   );
