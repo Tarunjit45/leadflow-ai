@@ -8,11 +8,29 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: Optional[str] = None
+    agree_terms: Optional[bool] = True
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class VerifyEmailPayload(BaseModel):
+    token: str
+
+
+class ResendVerificationPayload(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordPayload(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordPayload(BaseModel):
+    token: str
+    new_password: str
 
 
 class UserPasswordUpdate(BaseModel):
@@ -31,7 +49,8 @@ class UserOut(BaseModel):
     name: Optional[str] = None
     avatar_url: Optional[str] = None
     is_active: bool
-    is_superadmin: bool
+    is_verified: bool = False
+    is_superadmin: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -42,6 +61,7 @@ class Token(BaseModel):
     token_type: str = "bearer"
     user: UserOut
     business_id: Optional[str] = None
+    requires_verification: Optional[bool] = False
 
 
 # --- Business & Onboarding Schemas ---

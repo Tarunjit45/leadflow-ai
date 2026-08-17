@@ -36,6 +36,20 @@ async def get_current_user(
     user = db.query(User).filter(User.id == payload["sub"]).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive.")
+
+    # Check session version for instant revocation upon logout or password change
+    token_session_version = payload.get("session_version", 1)
+    user_session_version = getattr(user, "session_version", 1) or 1
+    if token_session_version != user_session_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return user
 
 

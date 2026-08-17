@@ -30,9 +30,10 @@ def create_access_token(
     subject: Union[str, Any],
     business_id: Optional[str] = None,
     role: Optional[str] = None,
+    session_version: int = 1,
     expires_delta: Optional[timedelta] = None
 ) -> str:
-    """Generates a signed JWT access token containing subject, tenant (business_id), and role."""
+    """Generates a signed JWT access token containing subject, tenant (business_id), role, and session_version."""
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -42,7 +43,8 @@ def create_access_token(
         "exp": expire,
         "sub": str(subject),
         "business_id": business_id,
-        "role": role or "owner"
+        "role": role or "owner",
+        "session_version": session_version
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
