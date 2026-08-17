@@ -23,22 +23,25 @@ import {
   Database,
   ChevronDown,
   Activity,
+  Phone,
 } from 'lucide-react';
 import { fetchApi } from '../../../lib/api';
+import PhoneInputWithCountry from '../../../components/PhoneInputWithCountry';
 
 function SettingsContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>('profile');
 
   // Business Profile State
-  const [bizName, setBizName] = useState('My Business Workspace');
-  const [phone, setPhone] = useState('+1 (512) 555-0149');
-  const [address, setAddress] = useState('Austin, TX');
-  const [timezone, setTimezone] = useState('America/Chicago');
-  const [avgJobValue, setAvgJobValue] = useState<number>(850);
+  const [bizName, setBizName] = useState('');
+  const [phone, setPhone] = useState('+91 ');
+  const [address, setAddress] = useState('');
+  const [timezone, setTimezone] = useState('Asia/Kolkata');
+  const [avgJobValue, setAvgJobValue] = useState<number>(500);
 
   // Channels State
   const [waConnected, setWaConnected] = useState(true);
+  const [waPhone, setWaPhone] = useState('+91 ');
   const [calConnected, setCalConnected] = useState(true);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
@@ -48,13 +51,13 @@ function SettingsContent() {
 
   // Billing State
   const [sub, setSub] = useState<any>({
-    plan_tier: 'growth',
+    plan_tier: 'Growth',
     status: 'active',
     amount: 199,
     billing_interval: 'month',
-    messages_count: 342,
+    messages_count: 0,
     messages_limit: 2500,
-    appointments_count: 19,
+    appointments_count: 0,
     appointments_limit: 250,
   });
 
@@ -69,8 +72,6 @@ function SettingsContent() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // Diagnostics
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
@@ -80,10 +81,13 @@ function SettingsContent() {
     fetchApi('/businesses/current')
       .then((data) => {
         if (data?.name) setBizName(data.name);
-        if (data?.phone) setPhone(data.phone);
+        if (data?.phone) {
+          setPhone(data.phone);
+          setWaPhone(data.phone);
+        }
         if (data?.address) setAddress(data.address);
         if (data?.timezone) setTimezone(data.timezone);
-        if (data?.average_job_value) setAvgJobValue(data.average_job_value);
+        if (data?.average_job_value !== undefined) setAvgJobValue(data.average_job_value);
       })
       .catch(() => {});
 
@@ -166,7 +170,7 @@ function SettingsContent() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Settings &amp; Channels</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Manage your company profile, connected channels, billing, and workspace security.
+            Manage your real company profile, international WhatsApp business number, and integrations.
           </p>
         </div>
 
@@ -211,45 +215,57 @@ function SettingsContent() {
       {activeTab === 'profile' && (
         <div className="space-y-6 animate-fade-in">
           <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-5">
-            <h2 className="text-base font-bold text-white">Business Information</h2>
+            <h2 className="text-base font-bold text-white">Real Business Information</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Business Name</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Business Name *
+                </label>
                 <input
                   type="text"
+                  required
                   value={bizName}
                   onChange={(e) => setBizName(e.target.value)}
+                  placeholder="e.g. Biswas Home Services"
                   className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Business Phone Number</label>
-                <input
-                  type="text"
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  WhatsApp / Contact Phone (Select Country) *
+                </label>
+                <PhoneInputWithCountry
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="input-field"
+                  onChange={setPhone}
+                  defaultCountryCode="IN"
+                  placeholder="98765 43210"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Service Area Address</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Service Area City / Region
+                </label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. Kolkata, WB, India"
                   className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Average Job Value ($)</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Average Job Value (in your currency)
+                </label>
                 <input
                   type="number"
                   value={avgJobValue}
                   onChange={(e) => setAvgJobValue(parseFloat(e.target.value) || 0)}
+                  placeholder="500"
                   className="input-field"
                 />
               </div>
@@ -273,20 +289,48 @@ function SettingsContent() {
         <div className="space-y-6 animate-fade-in">
           {/* WhatsApp Channel Card */}
           <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">WhatsApp Business Cloud API</h3>
-                  <p className="text-xs text-slate-400">Allows AI to receive customer messages and send instant quotes.</p>
+                  <h3 className="text-sm font-bold text-white">WhatsApp Business Number</h3>
+                  <p className="text-xs text-slate-400">Incoming messages to this number are answered by your AI employee in &lt; 2s.</p>
                 </div>
               </div>
 
-              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
-                Connected
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold shrink-0">
+                Live &amp; Connected
               </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                Connected WhatsApp Number:
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <PhoneInputWithCountry
+                    value={waPhone}
+                    onChange={setWaPhone}
+                    defaultCountryCode="IN"
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    await fetchApi('/businesses/current', {
+                      method: 'PATCH',
+                      body: JSON.stringify({ phone: waPhone }),
+                    });
+                    setSavedSuccess(true);
+                    setTimeout(() => setSavedSuccess(false), 3000);
+                  }}
+                  className="btn-primary py-2.5 px-4 text-xs font-bold shrink-0"
+                >
+                  Update Number
+                </button>
+              </div>
             </div>
           </div>
 
@@ -344,15 +388,15 @@ function SettingsContent() {
               <div className="font-bold text-white">3-Stage Follow-Up Sequence:</div>
               <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-blue-400 font-bold">Stage 1 (+24 Hours):</span>
-                <p className="text-slate-300">&ldquo;Hi Sarah, checking in to see if you still needed help with your AC checkup tomorrow.&rdquo;</p>
+                <p className="text-slate-300">&ldquo;Hi! Checking in to see if you still needed assistance with your service request.&rdquo;</p>
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-blue-400 font-bold">Stage 2 (+72 Hours):</span>
-                <p className="text-slate-300">&ldquo;Hi Sarah, we have an open dispatch opening this Thursday morning if you&apos;d like us to hold the slot for you.&rdquo;</p>
+                <p className="text-slate-300">&ldquo;Hi! We have an open dispatch slot available this week if you&apos;d like us to hold it for you.&rdquo;</p>
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-blue-400 font-bold">Stage 3 (+7 Days):</span>
-                <p className="text-slate-300">&ldquo;Hi Sarah, friendly reminder that our service team is available whenever you&apos;re ready. Have a great week!&rdquo;</p>
+                <p className="text-slate-300">&ldquo;Friendly reminder that our team is available whenever you&apos;re ready. Have a wonderful week!&rdquo;</p>
               </div>
             </div>
           </div>
@@ -380,20 +424,20 @@ function SettingsContent() {
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400">Monthly AI Messages</span>
-                  <span className="text-white font-bold">{sub.messages_count || 342} / {sub.messages_limit || 2500}</span>
+                  <span className="text-white font-bold">{sub.messages_count || 0} / {sub.messages_limit || 2500}</span>
                 </div>
                 <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-blue-500 h-full rounded-full" style={{ width: '15%' }} />
+                  <div className="bg-blue-500 h-full rounded-full" style={{ width: '5%' }} />
                 </div>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400">Monthly Bookings</span>
-                  <span className="text-white font-bold">{sub.appointments_count || 19} / {sub.appointments_limit || 250}</span>
+                  <span className="text-white font-bold">{sub.appointments_count || 0} / {sub.appointments_limit || 250}</span>
                 </div>
                 <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: '8%' }} />
+                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: '2%' }} />
                 </div>
               </div>
             </div>

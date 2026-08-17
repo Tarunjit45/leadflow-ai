@@ -27,6 +27,7 @@ import {
 import { fetchApi } from '../../lib/api';
 import { INDUSTRY_TEMPLATES, IndustryTemplate, ServiceItem } from '../../lib/industryTemplates';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
+import PhoneInputWithCountry from '../../components/PhoneInputWithCountry';
 
 function OnboardingContent() {
   const router = useRouter();
@@ -40,10 +41,10 @@ function OnboardingContent() {
 
   // Business Profile State
   const [selectedIndustryKey, setSelectedIndustryKey] = useState<string>('hvac');
-  const [bizName, setBizName] = useState<string>('Apex Air & Plumbing Specialists');
-  const [phone, setPhone] = useState<string>('+1 (512) 555-0149');
-  const [city, setCity] = useState<string>('Austin, TX');
-  const [timezone, setTimezone] = useState<string>('America/Chicago');
+  const [bizName, setBizName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('+91 ');
+  const [city, setCity] = useState<string>('');
+  const [timezone, setTimezone] = useState<string>('Asia/Kolkata');
 
   // Goals / AI Responsibilities
   const [goals, setGoals] = useState({
@@ -80,9 +81,9 @@ function OnboardingContent() {
   const [automationActive, setAutomationActive] = useState<boolean>(true);
 
   // Account Info Summary
-  const [userEmail, setUserEmail] = useState<string>('your-email@business.com');
+  const [userEmail, setUserEmail] = useState<string>('');
 
-  // Parse URL query params for mobile continuation
+  // Parse URL query params and load real business info
   useEffect(() => {
     const urlToken = searchParams.get('token');
     if (urlToken) {
@@ -107,6 +108,16 @@ function OnboardingContent() {
         if (u.email) setUserEmail(u.email);
       } catch {}
     }
+
+    // Load real business workspace from database
+    fetchApi('/businesses/current')
+      .then((data) => {
+        if (data?.name) setBizName(data.name);
+        if (data?.phone) setPhone(data.phone);
+        if (data?.address) setCity(data.address);
+        if (data?.timezone) setTimezone(data.timezone);
+      })
+      .catch(() => {});
   }, [searchParams]);
 
   // Handle industry selection and apply smart defaults
@@ -439,23 +450,22 @@ function OnboardingContent() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300">Business Phone Number</label>
-                  <input
-                    type="text"
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp / Contact Phone *</label>
+                  <PhoneInputWithCountry
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                    className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-sky-500 focus:outline-none"
+                    onChange={setPhone}
+                    defaultCountryCode="IN"
+                    placeholder="98765 43210"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300">City / Location</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">City / Location</label>
                   <input
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="e.g. Austin, TX"
-                    className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:border-sky-500 focus:outline-none"
+                    placeholder="e.g. Kolkata, WB, India"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-sky-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -577,10 +587,19 @@ function OnboardingContent() {
               </div>
 
               <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-4 max-w-md mx-auto text-left">
-                <div className="space-y-2 text-xs">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-300">WhatsApp Business Number:</label>
+                  <PhoneInputWithCountry
+                    value={phone}
+                    onChange={setPhone}
+                    defaultCountryCode="IN"
+                  />
+                </div>
+
+                <div className="space-y-2 text-xs pt-1">
                   <div className="flex items-center gap-2 text-slate-300">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>Works with your existing business number</span>
+                    <span>Works with any international country code</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-300">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
@@ -588,7 +607,7 @@ function OnboardingContent() {
                   </div>
                   <div className="flex items-center gap-2 text-slate-300">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>Safe, private, and 100% disconnectable anytime</span>
+                    <span>Safe, private, and disconnectable anytime</span>
                   </div>
                 </div>
 

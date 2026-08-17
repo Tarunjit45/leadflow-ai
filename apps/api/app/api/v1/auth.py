@@ -104,12 +104,17 @@ def register(payload: UserCreate, request: Request, db: Session = Depends(get_db
     db.add(user)
     db.flush()
 
-    # Create default business workspace for this user
-    business_name = f"{user.name}'s Service Co"
+    # Create real business workspace for this user
+    real_biz_name = (payload.business_name or "").strip() or f"{user.name}'s Company"
+    real_phone = (payload.phone or "").strip()
+    real_city = (payload.city or "").strip()
+
     business = Business(
-        name=business_name,
-        industry="Home Services (HVAC/Plumbing/Electrical)",
-        timezone="America/New_York",
+        name=real_biz_name,
+        phone=real_phone,
+        address=real_city,
+        industry="Home Services & Contractors",
+        timezone="Asia/Kolkata" if "+91" in real_phone else "America/New_York",
         onboarding_completed=False,
     )
     db.add(business)

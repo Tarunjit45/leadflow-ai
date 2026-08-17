@@ -8,6 +8,10 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: Optional[str] = None
+    business_name: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    country_code: Optional[str] = None
     agree_terms: Optional[bool] = True
 
 
