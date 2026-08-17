@@ -199,3 +199,83 @@ body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans
 </body></html>"""
 
         return cls.send_email(to_email, subject, html_content, text_content)
+
+    @classmethod
+    def send_onboarding_welcome_email(
+        cls,
+        to_email: str,
+        name: str,
+        business_name: str,
+        agent_name: str,
+        phone_number: str,
+        app_url: str,
+    ) -> bool:
+        base = app_url.rstrip("/")
+        dashboard_url = f"{base}/dashboard"
+        subject = f"🎉 Your 24/7 AI Employee '{agent_name}' is Live for {business_name}!"
+
+        text_content = f"""Hi {name},
+
+Congratulations! Your AI Employee '{agent_name}' is now fully configured and active for {business_name}.
+
+📱 WhatsApp AI Copilot & Command Center:
+You can manage and control your AI assistant directly via WhatsApp on: {phone_number}
+
+Here are some tasks and commands you can text your AI assistant anytime:
+• "How many leads did we get today?"
+• "What appointments are booked for tomorrow?"
+• "Pause the AI" or "Resume the AI"
+• "Add a new service: AC Deep Cleaning for $140"
+• "Change business hours to 8 AM - 8 PM"
+
+Whenever a customer messages your WhatsApp or website widget, '{agent_name}' will respond in < 2 seconds and book appointments directly on your calendar.
+
+View your real-time analytics & pipeline here:
+{dashboard_url}
+
+Best regards,
+The LeadFlow AI Team
+"""
+
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #080b11; color: #f1f5f9; padding: 40px 20px; }}
+.card {{ max-width: 560px; margin: 0 auto; background: #0e131f; border: 1px solid #1e293b; border-radius: 24px; padding: 36px; }}
+.btn {{ display: inline-block; background: #2563eb; color: #ffffff !important; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 28px; border-radius: 12px; margin: 20px 0; }}
+.box {{ background: #080b11; border: 1px solid #1e293b; border-radius: 16px; padding: 20px; margin: 20px 0; }}
+.badge {{ display: inline-block; background: rgba(37,99,235,0.15); color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }}
+</style></head>
+<body>
+<div class="card">
+  <div class="badge">🟢 AI Employee Live &amp; Active</div>
+  <h2 style="color: #ffffff; margin-top: 14px; font-size: 22px;">Meet '{agent_name}', your 24/7 AI employee</h2>
+  <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6;">
+    Hi {name},<br><br>
+    Your workspace for <strong>{business_name}</strong> is now live! Your AI employee is actively ready to answer customer inquiries, quote prices, and book confirmed appointments.
+  </p>
+
+  <div class="box">
+    <div style="font-weight: 700; color: #ffffff; font-size: 13px; margin-bottom: 8px;">📱 WhatsApp Command Center:</div>
+    <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+      You can manage and issue tasks to your AI employee directly from your WhatsApp number (<strong>{phone_number}</strong>). Try texting it:
+    </div>
+    <ul style="font-size: 12px; color: #60a5fa; margin: 10px 0 0 0; padding-left: 20px; line-height: 1.7;">
+      <li><em>&ldquo;How many leads did we get today?&rdquo;</em></li>
+      <li><em>&ldquo;What appointments are booked for tomorrow?&rdquo;</em></li>
+      <li><em>&ldquo;Add a new service: AC Deep Cleaning for $140&rdquo;</em></li>
+      <li><em>&ldquo;Pause the AI&rdquo; or &ldquo;Resume the AI&rdquo;</em></li>
+    </ul>
+  </div>
+
+  <div style="text-align: center;">
+    <a href="{dashboard_url}" class="btn">Open Real-Time Dashboard</a>
+  </div>
+
+  <p style="font-size: 12px; color: #64748b; border-top: 1px solid #1e293b; padding-top: 16px; margin-top: 24px;">
+    © {business_name} • Powered by LeadFlow AI
+  </p>
+</div>
+</body></html>"""
+
+        return cls.send_email(to_email, subject, html_content, text_content)

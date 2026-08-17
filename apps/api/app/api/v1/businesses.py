@@ -1,10 +1,15 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from apps.api.app.core.database import get_db
+from apps.api.app.core.config import settings
+from apps.api.app.core.email import EmailService
 from apps.api.app.api.deps import get_current_business, get_current_user
-from apps.api.app.models.models import Business, BusinessKnowledge, Agent, User
+from apps.api.app.integrations.whatsapp import WhatsAppProvider
+from apps.api.app.models.models import Business, BusinessKnowledge, Agent, User, Conversation, Message
 from apps.api.app.schemas.schemas import BusinessOut, BusinessUpdate, OnboardingPayload
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/businesses", tags=["Businesses"])
 
 
@@ -27,12 +32,13 @@ def update_business(
 
 
 @router.post("/onboarding", response_model=BusinessOut)
-def complete_onboarding(
+async def complete_onboarding(
     payload: OnboardingPayload,
     business: Business = Depends(get_current_business),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Processes the full multi-step onboarding wizard in a single atomic operation."""
+    """Processes the full multi-step onboarding wizard in a single atomic operation and dispatches welcome notifications."""
     business.name = payload.business_name
     business.industry = payload.industry
     business.website = payload.website
@@ -67,6 +73,44 @@ def complete_onboarding(
 
     db.commit()
     db.refresh(business)
+
+    # 1. Dispatch Automated WhatsApp Welcome & Command Center introduction to owner's number
+    if business.phone and len(business.phone.strip()) > 3:
+        whatsapp = WhatsAppProvider()
+        welcome_whatsapp_msg = (
+            f"👋 Welcome to LeadFlow AI, {current_user.name}!\n\n"
+            f"I am {agent.name}, your new 24/7 AI employee for {business.name}.\n\n"
+            f"✅ I am now actively connected and ready to respond to incoming customer inquiries, quote prices, and book appointments in under 2 seconds.\n\n"
+            f"🎮 WhatsApp Owner Control Center:\n"
+            f"You can control me and manage your entire business directly from this WhatsApp chat! Just message me tasks like:\n"
+            f"• 'How many leads did we get today?'\n"
+            f"• 'What appointments are booked for tomorrow?'\n"
+            f"• 'Pause the AI' or 'Resume the AI'\n"
+            f"• 'Add a new service: AC Deep Cleaning for $140'\n"
+            f"• 'Change business hours to 8 AM - 8 PM'\n\n"
+            f"Whenever you need anything updated, just message me right here anytime!"
+        )
+        try:
+            await whatsapp.send_text_message(business.phone, welcome_whatsapp_msg)
+            logger.info(f"✓ Welcome WhatsApp message dispatched to {business.phone}")
+        except Exception as e:
+            logger.warning(f"Failed to dispatch welcome WhatsApp message: {e}")
+
+    # 2. Dispatch Automated Welcome Email to owner
+    if current_user.email:
+        try:
+            EmailService.send_onboarding_welcome_email(
+                to_email=current_user.email,
+                name=current_user.name or "Business Owner",
+                business_name=business.name,
+                agent_name=agent.name,
+                phone_number=business.phone or "Your WhatsApp Number",
+                app_url=settings.APP_URL,
+            )
+            logger.info(f"✓ Welcome Email dispatched to {current_user.email}")
+        except Exception as e:
+            logger.warning(f"Failed to dispatch welcome email: {e}")
+
     return BusinessOut.model_validate(business)
 
 
@@ -128,4 +172,3 @@ def get_setup_progress(
         "steps": steps,
         "is_ready": completed_count >= 4,
     }
-

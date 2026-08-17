@@ -8,6 +8,8 @@ from apps.api.app.models.models import (
     Appointment,
     Conversation,
     Business,
+    BusinessKnowledge,
+    Agent,
     AuditLog,
     AutomationExecution,
     Integration
@@ -76,7 +78,6 @@ class ToolRegistry:
 
         tool = self._tools[tool_name]
 
-        # Backend permission verification (Section 19)
         if not allowed_tools.get(tool_name, True):
             logger.warning(f"Permission denied for tool '{tool_name}' on business {business_id}")
             return {
@@ -207,6 +208,109 @@ class ToolRegistry:
             )
         )
 
+        # =========================================================================
+        # 6-11. OWNER COPILOT / WHATSAPP CONTROL CENTER TOOLS
+        # =========================================================================
+
+        # 6. Owner Pipeline Summary
+        self.register(
+            ToolDefinition(
+                name="get_owner_pipeline_summary",
+                description="Retrieves current real-time statistics on leads, conversion rate, appointments, and estimated revenue for the business owner.",
+                parameters={"type": "object", "properties": {}},
+                permission_key="owner.analytics",
+                handler=_handle_owner_pipeline_summary,
+            )
+        )
+
+        # 7. Owner Upcoming Appointments
+        self.register(
+            ToolDefinition(
+                name="get_owner_appointments",
+                description="Lists confirmed upcoming customer bookings and dispatch schedule.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "default": 5, "description": "Number of upcoming appointments to retrieve"}
+                    },
+                },
+                permission_key="owner.appointments",
+                handler=_handle_owner_appointments,
+            )
+        )
+
+        # 8. Owner Recent Inquiries
+        self.register(
+            ToolDefinition(
+                name="get_owner_recent_leads",
+                description="Lists the most recent customer conversations and inquiry details.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "default": 5, "description": "Number of recent inquiries to fetch"}
+                    },
+                },
+                permission_key="owner.leads",
+                handler=_handle_owner_recent_leads,
+            )
+        )
+
+        # 9. Toggle AI Automation Switch
+        self.register(
+            ToolDefinition(
+                name="toggle_ai_automation",
+                description="Pauses or resumes the AI employee for all inbound customer channels.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "new_status": {"type": "string", "enum": ["active", "paused"], "description": "Target status"}
+                    },
+                    "required": ["new_status"],
+                },
+                permission_key="owner.settings",
+                handler=_handle_toggle_ai_automation,
+            )
+        )
+
+        # 10. Add or Update Service in Knowledge Base
+        self.register(
+            ToolDefinition(
+                name="add_or_update_service_catalog",
+                description="Adds a new service or updates price/description in the business knowledge base.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "service_name": {"type": "string", "description": "Name of the service"},
+                        "price": {"type": "string", "description": "Price or starting rate (e.g. $150 or ₹2,500)"},
+                        "description": {"type": "string", "description": "Brief description of what is included"},
+                        "duration_minutes": {"type": "integer", "default": 60, "description": "Estimated job duration in minutes"}
+                    },
+                    "required": ["service_name", "price"],
+                },
+                permission_key="owner.knowledge",
+                handler=_handle_add_or_update_service,
+            )
+        )
+
+        # 11. Update Business Hours
+        self.register(
+            ToolDefinition(
+                name="update_business_hours_schedule",
+                description="Updates business operating hours in the knowledge base.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "open_time": {"type": "string", "description": "Opening time e.g. 08:00 or 9:00 AM"},
+                        "close_time": {"type": "string", "description": "Closing time e.g. 20:00 or 8:00 PM"},
+                        "days": {"type": "string", "description": "Days to apply e.g. 'all', 'weekdays', 'saturday'"}
+                    },
+                    "required": ["open_time", "close_time"],
+                },
+                permission_key="owner.knowledge",
+                handler=_handle_update_business_hours,
+            )
+        )
+
 
 # --- Handler Implementations ---
 
@@ -258,17 +362,13 @@ async def _handle_qualify_lead(db: Session, business_id: str, conversation_id: s
 
 
 async def _handle_get_availability(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
-    # Returns smart mock or real calendar availability slots
     now = datetime.now(timezone.utc)
     slots = []
     
-    # Generate realistic open slots for the next 2-3 business days
     for day_offset in range(1, 4):
         target_day = now + timedelta(days=day_offset)
-        # 10:00 AM slot
         slot_1_start = target_day.replace(hour=10, minute=0, second=0, microsecond=0)
         slot_1_end = target_day.replace(hour=11, minute=0, second=0, microsecond=0)
-        # 2:00 PM slot
         slot_2_start = target_day.replace(hour=14, minute=0, second=0, microsecond=0)
         slot_2_end = target_day.replace(hour=15, minute=0, second=0, microsecond=0)
 
@@ -342,7 +442,6 @@ async def _handle_human_handoff(db: Session, business_id: str, conversation_id: 
         conv.status = "human_handling"
         db.commit()
     
-    # Audit log
     audit = AuditLog(
         business_id=business_id,
         action="human_takeover_requested",
@@ -371,6 +470,154 @@ async def _handle_notify_owner(db: Session, business_id: str, conversation_id: s
     db.add(audit)
     db.commit()
     return {"dispatched": True, "title": args.get("title")}
+
+
+# --- Owner Copilot Handlers ---
+
+async def _handle_owner_pipeline_summary(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    leads_count = db.query(Lead).filter(Lead.business_id == business_id).count()
+    qualified_count = db.query(Lead).filter(Lead.business_id == business_id, Lead.score >= 60).count()
+    appts_count = db.query(Appointment).filter(Appointment.business_id == business_id, Appointment.status == "confirmed").count()
+    biz = db.query(Business).filter(Business.id == business_id).first()
+    avg_val = getattr(biz, "average_job_value", 500.0) or 500.0
+    est_rev = round(appts_count * avg_val, 2)
+
+    return {
+        "total_leads": leads_count,
+        "qualified_leads": qualified_count,
+        "appointments_booked": appts_count,
+        "estimated_revenue_generated": est_rev,
+        "business_name": biz.name if biz else "Business",
+    }
+
+
+async def _handle_owner_appointments(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    limit = args.get("limit", 5)
+    appts = (
+        db.query(Appointment)
+        .filter(Appointment.business_id == business_id, Appointment.status == "confirmed")
+        .order_by(Appointment.start_time.asc())
+        .limit(limit)
+        .all()
+    )
+    items = []
+    for a in appts:
+        items.append({
+            "id": a.id,
+            "customer_name": a.customer_name,
+            "customer_contact": a.customer_contact,
+            "service": a.service,
+            "start_time": a.start_time.strftime("%a, %b %d at %I:%M %p") if a.start_time else "TBD",
+        })
+    return {"upcoming_appointments": items, "count": len(items)}
+
+
+async def _handle_owner_recent_leads(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    limit = args.get("limit", 5)
+    leads = (
+        db.query(Lead)
+        .filter(Lead.business_id == business_id)
+        .order_by(Lead.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    items = []
+    for l in leads:
+        items.append({
+            "name": l.name,
+            "phone": l.phone,
+            "service": l.service,
+            "urgency": l.urgency,
+            "score": l.score,
+            "status": l.status,
+        })
+    return {"recent_leads": items, "count": len(items)}
+
+
+async def _handle_toggle_ai_automation(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    target_status = args.get("new_status", "active")
+    agent = db.query(Agent).filter(Agent.business_id == business_id).first()
+    if not agent:
+        agent = Agent(business_id=business_id, name="LeadFlow Assistant", status=target_status)
+        db.add(agent)
+    else:
+        agent.status = target_status
+    db.commit()
+    db.refresh(agent)
+    return {
+        "status": agent.status,
+        "is_active": agent.status == "active",
+        "message": f"AI Employee automation is now {agent.status.upper()}.",
+    }
+
+
+async def _handle_add_or_update_service(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business_id).first()
+    if not knowledge:
+        knowledge = BusinessKnowledge(business_id=business_id, services=[])
+        db.add(knowledge)
+
+    current_services = list(knowledge.services or [])
+    name = args.get("service_name", "").strip()
+    price = args.get("price", "").strip()
+    desc = args.get("description", "Standard service offering")
+    duration = args.get("duration_minutes", 60)
+
+    # Check if already exists
+    updated = False
+    for s in current_services:
+        if s.get("name", "").lower() == name.lower():
+            s["price"] = price
+            if desc:
+                s["description"] = desc
+            s["duration"] = duration
+            updated = True
+            break
+
+    if not updated:
+        current_services.append({
+            "name": name,
+            "price": price,
+            "description": desc,
+            "duration": duration,
+        })
+
+    knowledge.services = current_services
+    db.commit()
+    return {
+        "success": True,
+        "action": "updated" if updated else "added",
+        "service_name": name,
+        "price": price,
+        "total_services": len(current_services),
+    }
+
+
+async def _handle_update_business_hours(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business_id).first()
+    if not knowledge:
+        knowledge = BusinessKnowledge(business_id=business_id, hours={})
+        db.add(knowledge)
+
+    open_t = args.get("open_time", "08:00")
+    close_t = args.get("close_time", "18:00")
+    
+    # Standardize hours dict
+    hours = {
+        "monday": {"open": open_t, "close": close_t, "closed": False},
+        "tuesday": {"open": open_t, "close": close_t, "closed": False},
+        "wednesday": {"open": open_t, "close": close_t, "closed": False},
+        "thursday": {"open": open_t, "close": close_t, "closed": False},
+        "friday": {"open": open_t, "close": close_t, "closed": False},
+        "saturday": {"open": open_t, "close": close_t, "closed": False},
+        "sunday": {"open": "00:00", "close": "00:00", "closed": True},
+    }
+    knowledge.hours = hours
+    db.commit()
+    return {
+        "success": True,
+        "message": f"Business operating hours updated: {open_t} to {close_t}.",
+    }
 
 
 tool_registry = ToolRegistry()

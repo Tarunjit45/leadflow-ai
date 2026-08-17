@@ -87,6 +87,11 @@ async def receive_whatsapp_message(
                 if not business:
                     continue
 
+                # Check if sender is the business owner
+                clean_from = "".join(filter(str.isdigit, from_number))
+                clean_biz_phone = "".join(filter(str.isdigit, business.phone or ""))
+                is_owner = bool(clean_biz_phone and (clean_from.endswith(clean_biz_phone) or clean_biz_phone.endswith(clean_from)))
+
                 conv = db.query(Conversation).filter(
                     Conversation.business_id == business.id,
                     Conversation.customer_id == from_number,
@@ -97,7 +102,7 @@ async def receive_whatsapp_message(
                     conv = Conversation(
                         business_id=business.id,
                         customer_id=from_number,
-                        customer_name=contact_name,
+                        customer_name="Business Owner (You)" if is_owner else contact_name,
                         channel="whatsapp",
                         status="ai_handling",
                         last_message_preview=text_content[:150],
@@ -106,28 +111,39 @@ async def receive_whatsapp_message(
                     db.commit()
                     db.refresh(conv)
 
-                customer_msg = Message(
+                sender_role = "owner" if is_owner else "customer"
+                msg_record = Message(
                     conversation_id=conv.id,
-                    sender_type="customer",
+                    sender_type=sender_role,
                     sender_id=from_number,
                     channel_message_id=msg_id,
                     content=text_content,
                 )
-                db.add(customer_msg)
+                db.add(msg_record)
                 conv.last_message_at = datetime.now(timezone.utc)
                 conv.last_message_preview = text_content[:150]
                 db.commit()
 
                 runtime = AgentRuntime(db)
-                agent_res = await runtime.process_incoming_message(
-                    business_id=business.id,
-                    conversation_id=conv.id,
-                    customer_message_text=text_content,
-                    sender_type="customer",
-                )
 
-                if agent_res.get("response_text"):
-                    await whatsapp.send_text_message(from_number, agent_res["response_text"])
+                if is_owner:
+                    logger.info(f"📱 Owner WhatsApp message detected from {from_number} for business {business.name}")
+                    owner_res = await runtime.process_owner_command(
+                        business_id=business.id,
+                        conversation_id=conv.id,
+                        owner_message_text=text_content,
+                    )
+                    if owner_res.get("response_text"):
+                        await whatsapp.send_text_message(from_number, owner_res["response_text"])
+                else:
+                    agent_res = await runtime.process_incoming_message(
+                        business_id=business.id,
+                        conversation_id=conv.id,
+                        customer_message_text=text_content,
+                        sender_type="customer",
+                    )
+                    if agent_res.get("response_text"):
+                        await whatsapp.send_text_message(from_number, agent_res["response_text"])
 
     return {"status": "processed"}
 
