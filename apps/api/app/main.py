@@ -53,8 +53,11 @@ logger = logging.getLogger("leadflow_api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing LeadFlow AI Database Schema...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("LeadFlow AI Backend Ready.")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("LeadFlow AI Database Schema ready.")
+    except Exception as e:
+        logger.warning(f"Database schema auto-creation notice: {e}")
     yield
 
 
@@ -67,12 +70,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Ensure schema exists on cold start
-try:
-    Base.metadata.create_all(bind=engine)
-except Exception as e:
-    logger.warning(f"Database schema auto-creation notice: {str(e)}")
-
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
@@ -83,28 +80,37 @@ app.add_middleware(
 )
 
 # Include all API v1 Routers
-app.include_router(auth.router, prefix=settings.API_V1_STR)
-app.include_router(businesses.router, prefix=settings.API_V1_STR)
-app.include_router(agents.router, prefix=settings.API_V1_STR)
-app.include_router(knowledge.router, prefix=settings.API_V1_STR)
-app.include_router(conversations.router, prefix=settings.API_V1_STR)
-app.include_router(leads.router, prefix=settings.API_V1_STR)
-app.include_router(appointments.router, prefix=settings.API_V1_STR)
-app.include_router(integrations.router, prefix=settings.API_V1_STR)
-app.include_router(webhooks.router, prefix=settings.API_V1_STR)
-app.include_router(analytics.router, prefix=settings.API_V1_STR)
-app.include_router(billing.router, prefix=settings.API_V1_STR)
-app.include_router(test_console.router, prefix=settings.API_V1_STR)
-app.include_router(widget.router, prefix=settings.API_V1_STR)
-app.include_router(admin.router, prefix=settings.API_V1_STR)
-app.include_router(workers.router, prefix=settings.API_V1_STR)
+app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication & Security"])
+app.include_router(businesses.router, prefix=f"{settings.API_V1_STR}/businesses", tags=["Business Workspaces"])
+app.include_router(agents.router, prefix=f"{settings.API_V1_STR}/agents", tags=["AI Sales Agent Studio"])
+app.include_router(knowledge.router, prefix=f"{settings.API_V1_STR}/knowledge", tags=["Business Knowledge Base"])
+app.include_router(conversations.router, prefix=f"{settings.API_V1_STR}/conversations", tags=["Conversations & Inbox"])
+app.include_router(leads.router, prefix=f"{settings.API_V1_STR}/leads", tags=["Leads & Qualification"])
+app.include_router(appointments.router, prefix=f"{settings.API_V1_STR}/appointments", tags=["Appointments & Scheduling"])
+app.include_router(integrations.router, prefix=f"{settings.API_V1_STR}/integrations", tags=["Integrations (Google & Meta)"])
+app.include_router(webhooks.router, prefix=f"{settings.API_V1_STR}/webhooks", tags=["Inbound Webhooks (WhatsApp & Payments)"])
+app.include_router(analytics.router, prefix=f"{settings.API_V1_STR}/analytics", tags=["ROI & Analytics"])
+app.include_router(billing.router, prefix=f"{settings.API_V1_STR}/billing", tags=["Billing & Subscription Plans"])
+app.include_router(test_console.router, prefix=f"{settings.API_V1_STR}/test-console", tags=["AI Interactive Test Console"])
+app.include_router(widget.router, prefix=f"{settings.API_V1_STR}/widget", tags=["Website Live Chat Widget"])
+app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["System Admin & Diagnostics"])
+app.include_router(workers.router, prefix=f"{settings.API_V1_STR}/workers", tags=["Background Job Workers"])
 
 
 @app.get("/")
 def root():
     return {
-        "app": "LeadFlow AI API",
+        "app": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "status": "operational",
         "docs": f"{settings.API_V1_STR}/docs",
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "app": settings.PROJECT_NAME,
+        "version": settings.VERSION,
     }
