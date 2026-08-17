@@ -83,14 +83,33 @@ async def receive_whatsapp_message(
                 if not text_content:
                     continue
 
-                business = db.query(Business).first()
+                clean_from = "".join(filter(str.isdigit, from_number))
+                
+                # 1. Match business by owner phone number
+                all_businesses = db.query(Business).all()
+                business = None
+                is_owner = False
+
+                for b in all_businesses:
+                    clean_b_phone = "".join(filter(str.isdigit, b.phone or ""))
+                    if clean_b_phone and len(clean_b_phone) >= 7:
+                        if clean_from.endswith(clean_b_phone) or clean_b_phone.endswith(clean_from):
+                            business = b
+                            is_owner = True
+                            break
+
+                # 2. If not matched to owner, find the active tenant business
+                if not business:
+                    business = (
+                        db.query(Business)
+                        .filter(Business.onboarding_completed == True)
+                        .order_by(Business.created_at.desc())
+                        .first()
+                    )
+                if not business:
+                    business = db.query(Business).order_by(Business.created_at.desc()).first()
                 if not business:
                     continue
-
-                # Check if sender is the business owner
-                clean_from = "".join(filter(str.isdigit, from_number))
-                clean_biz_phone = "".join(filter(str.isdigit, business.phone or ""))
-                is_owner = bool(clean_biz_phone and (clean_from.endswith(clean_biz_phone) or clean_biz_phone.endswith(clean_from)))
 
                 conv = db.query(Conversation).filter(
                     Conversation.business_id == business.id,
@@ -124,6 +143,8 @@ async def receive_whatsapp_message(
                 conv.last_message_preview = text_content[:150]
                 db.commit()
 
+                # Instantiate tenant-aware provider and runtime
+                tenant_whatsapp = WhatsAppProvider(db=db, business_id=business.id)
                 runtime = AgentRuntime(db)
 
                 if is_owner:
@@ -134,7 +155,7 @@ async def receive_whatsapp_message(
                         owner_message_text=text_content,
                     )
                     if owner_res.get("response_text"):
-                        await whatsapp.send_text_message(from_number, owner_res["response_text"])
+                        await tenant_whatsapp.send_text_message(from_number, owner_res["response_text"])
                 else:
                     agent_res = await runtime.process_incoming_message(
                         business_id=business.id,
@@ -143,7 +164,7 @@ async def receive_whatsapp_message(
                         sender_type="customer",
                     )
                     if agent_res.get("response_text"):
-                        await whatsapp.send_text_message(from_number, agent_res["response_text"])
+                        await tenant_whatsapp.send_text_message(from_number, agent_res["response_text"])
 
     return {"status": "processed"}
 
