@@ -1,17 +1,35 @@
+import os
 import logging
 from typing import Generator, Dict, Any
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy.exc import ArgumentError
 from apps.api.app.core.config import settings
 
 logger = logging.getLogger("leadflow_db")
 
-# Normalize PostgreSQL URL scheme for SQLAlchemy 2.0
-db_url = settings.DATABASE_URL
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+FALLBACK_SQLITE_URL = "sqlite:///./leadflow_local.db"
 
-# Handle SQLite vs PostgreSQL connection specifics
+def get_sanitized_db_url(raw_url: str | None) -> str:
+    """Sanitizes, unquotes, and normalizes database connection URL."""
+    if not raw_url:
+        return FALLBACK_SQLITE_URL
+
+    url = str(raw_url).strip().strip("'").strip('"')
+
+    if not url or url.lower() in ("none", "null", "undefined", '""', "''"):
+        return FALLBACK_SQLITE_URL
+
+    # Normalize PostgreSQL URL scheme for SQLAlchemy 2.0+
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
+    return url
+
+
+db_url = get_sanitized_db_url(settings.DATABASE_URL)
+
+# Configure connection args & pool settings
 connect_args: Dict[str, Any] = {}
 engine_kwargs: Dict[str, Any] = {
     "pool_pre_ping": True,
@@ -26,10 +44,14 @@ else:
     engine_kwargs["max_overflow"] = 20
     engine_kwargs["pool_recycle"] = 300
 
-engine = create_engine(db_url, **engine_kwargs)
+try:
+    engine = create_engine(db_url, **engine_kwargs)
+except ArgumentError as e:
+    logger.warning(f"Failed to parse DB URL '{db_url}': {e}. Falling back to SQLite.")
+    db_url = FALLBACK_SQLITE_URL
+    engine = create_engine(db_url, connect_args={"check_same_thread": False, "timeout": 30})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
 

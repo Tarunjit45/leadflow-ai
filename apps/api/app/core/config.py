@@ -2,6 +2,7 @@ import os
 from typing import List, Optional
 from pydantic_settings import BaseSettings
 
+DEFAULT_DB_URL = "sqlite:///./leadflow_local.db"
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "LeadFlow AI API"
@@ -36,62 +37,62 @@ class Settings(BaseSettings):
     ]
 
     # Security & JWT
-    SECRET_KEY: str = "leadflow-super-secure-master-secret-key-32-chars-minimum-prod"
-    ENCRYPTION_KEY: str = "dGhpcy1pcy1hLXNlY3VyZS0zMi1ieXRlLWtleS1leGFtcGxlIQ=="
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "leadflow-super-secure-master-secret-key-32-chars-minimum-prod")
+    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "dGhpcy1pcy1hLXNlY3VyZS0zMi1ieXRlLWtleS1leGFtcGxlIQ==")
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
-    # Database (PostgreSQL in production / SQLite local fallback)
+    # Database (PostgreSQL if set, SQLite fallback)
     DATABASE_URL: str = (
         os.getenv("DATABASE_URL")
-        or ("sqlite:////tmp/leadflow_local.db" if os.getenv("VERCEL") else "sqlite:///./leadflow_local.db")
+        or DEFAULT_DB_URL
     )
     
     # Redis Queue
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # AI Configuration (Default: OpenRouter)
     AI_PROVIDER: str = "openrouter"
-    OPENROUTER_API_KEY: Optional[str] = None
-    OPENROUTER_MODEL: str = "google/gemini-2.0-flash-001"
-    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    AI_FALLBACK_MODEL: str = "anthropic/claude-3.5-haiku"
+    OPENROUTER_API_KEY: Optional[str] = os.getenv("OPENROUTER_API_KEY")
+    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    AI_FALLBACK_MODEL: str = "anthropic/claude-3-haiku"
 
     # Google Integrations (OAuth & Calendar & Sheets - Automatically derived from API_URL)
-    GOOGLE_CLIENT_ID: Optional[str] = None
-    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET")
     GOOGLE_REDIRECT_URI: str = (
         os.getenv("GOOGLE_REDIRECT_URI")
         or f"{os.getenv('API_URL', 'http://localhost:8000').rstrip('/')}/api/v1/integrations/google/callback"
     )
 
     # Meta WhatsApp Cloud API
-    META_APP_ID: Optional[str] = None
-    META_APP_SECRET: Optional[str] = None
-    META_VERIFY_TOKEN: str = "leadflow_whatsapp_webhook_verify_token"
-    META_ACCESS_TOKEN: Optional[str] = None
-    META_PHONE_NUMBER_ID: Optional[str] = None
-    META_WABA_ID: Optional[str] = None
+    META_APP_ID: Optional[str] = os.getenv("META_APP_ID")
+    META_APP_SECRET: Optional[str] = os.getenv("META_APP_SECRET")
+    META_VERIFY_TOKEN: str = os.getenv("META_VERIFY_TOKEN", "leadflow_whatsapp_webhook_verification_token_secret")
+    META_ACCESS_TOKEN: Optional[str] = os.getenv("META_ACCESS_TOKEN")
+    META_PHONE_NUMBER_ID: Optional[str] = os.getenv("META_PHONE_NUMBER_ID", "1265571813306233")
+    META_WABA_ID: Optional[str] = os.getenv("META_WABA_ID")
 
     # =========================================================================
     # PAYMENT PROVIDER ABSTRACTION (Primary: Dodo Payments)
     # =========================================================================
-    PAYMENT_PROVIDER: str = "dodo"      # "dodo" (Primary default) or "stripe" (optional)
-    BILLING_CURRENCY: str = "USD"       # Default international display currency (USD)
-    TRIAL_PERIOD_DAYS: int = 7          # Configurable trial period in days
-    BILLING_GRACE_PERIOD_DAYS: int = 3  # Grace period for past_due / on_hold status
+    PAYMENT_PROVIDER: str = "dodo"
+    BILLING_CURRENCY: str = "USD"
+    TRIAL_PERIOD_DAYS: int = 7
+    BILLING_GRACE_PERIOD_DAYS: int = 3
 
-    # Dodo Payments Configuration (Primary for India & International SaaS)
-    DODO_PAYMENTS_API_KEY: Optional[str] = None
-    DODO_PAYMENTS_WEBHOOK_KEY: Optional[str] = None
-    DODO_PAYMENTS_ENVIRONMENT: str = "test_mode"  # "test_mode" or "live_mode"
-    DODO_PAYMENTS_PRODUCT_STARTER: str = "pdt_starter_99_usd"
-    DODO_PAYMENTS_PRODUCT_GROWTH: str = "pdt_growth_199_usd"
+    # Dodo Payments Configuration (Configured in Test Mode)
+    DODO_PAYMENTS_API_KEY: Optional[str] = os.getenv("DODO_PAYMENTS_API_KEY")
+    DODO_PAYMENTS_WEBHOOK_KEY: Optional[str] = os.getenv("DODO_PAYMENTS_WEBHOOK_KEY")
+    DODO_PAYMENTS_ENVIRONMENT: str = "test_mode"
+    DODO_PAYMENTS_PRODUCT_STARTER: str = "pdt_0NlXRdRfqoWT5NiJJsyHG"
+    DODO_PAYMENTS_PRODUCT_GROWTH: str = "pdt_0NlXRdVCxD37AFYVg8DM7"
 
-    # Stripe Provider Configuration (Optional modular secondary provider)
-    STRIPE_SECRET_KEY: Optional[str] = None
-    STRIPE_PUBLISHABLE_KEY: Optional[str] = None
-    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    # Stripe Provider Configuration (Optional)
+    STRIPE_SECRET_KEY: Optional[str] = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_PUBLISHABLE_KEY: Optional[str] = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    STRIPE_WEBHOOK_SECRET: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET")
     STRIPE_PRICE_STARTER_MONTHLY: str = "price_starter_monthly_99"
     STRIPE_PRICE_GROWTH_MONTHLY: str = "price_growth_monthly_199"
 
