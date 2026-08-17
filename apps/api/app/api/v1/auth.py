@@ -89,8 +89,8 @@ def register(payload: UserCreate, request: Request, db: Session = Depends(get_db
     verification_token = secrets.token_urlsafe(32)
     token_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
 
-    # In local demo mode, auto-verify for instant developer onboarding testing
-    is_verified = bool(settings.ENABLE_DEMO_MODE)
+    # Instant access for registered business owners
+    is_verified = True
 
     user = User(
         email=email,
