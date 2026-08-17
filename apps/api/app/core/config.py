@@ -20,8 +20,9 @@ class Settings(BaseSettings):
     )
     API_URL: str = (
         os.getenv("API_URL")
+        or os.getenv("RENDER_EXTERNAL_URL")
         or os.getenv("NEXT_PUBLIC_API_URL")
-        or "http://localhost:8000"
+        or "https://leadflow-api-l23m.onrender.com"
     )
 
     # Dynamic CORS Origins
