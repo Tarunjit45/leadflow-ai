@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -9,6 +10,7 @@ import {
   CheckCircle2,
   CalendarCheck,
   ExternalLink,
+  Plus,
 } from 'lucide-react';
 import { fetchApi } from '../../../lib/api';
 
@@ -26,31 +28,13 @@ export default function AppointmentsPage() {
   const loadAppointments = async () => {
     try {
       const data = await fetchApi('/appointments/');
-      setAppointments(data);
+      if (Array.isArray(data)) {
+        setAppointments(data);
+      } else {
+        setAppointments([]);
+      }
     } catch {
-      // Demo mock appointments
-      setAppointments([
-        {
-          id: 'appt_1',
-          customer_name: 'Sarah Jenkins',
-          customer_contact: '+1 (512) 555-9821',
-          service: 'AC Emergency Repair',
-          start_time: new Date(Date.now() + 86400000).toISOString(),
-          end_time: new Date(Date.now() + 90000000).toISOString(),
-          status: 'confirmed',
-          notes: 'Customer reported humming fan noise in outdoor condenser unit.',
-        },
-        {
-          id: 'appt_2',
-          customer_name: 'Michael Chang',
-          customer_contact: '+1 (512) 555-8820',
-          service: 'Seasonal HVAC Tune-up',
-          start_time: new Date(Date.now() + 172800000).toISOString(),
-          end_time: new Date(Date.now() + 176400000).toISOString(),
-          status: 'confirmed',
-          notes: '24-point electrical check and filter replacement.',
-        },
-      ]);
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
@@ -59,14 +43,18 @@ export default function AppointmentsPage() {
   const loadAvailability = async () => {
     try {
       const data = await fetchApi('/appointments/availability');
-      setAvailableSlots(data.available_slots || []);
+      if (Array.isArray(data?.available_slots)) {
+        setAvailableSlots(data.available_slots);
+      } else {
+        setAvailableSlots([
+          { start: 'Tomorrow at 09:00 AM', end: '10:00 AM' },
+          { start: 'Tomorrow at 02:00 PM', end: '03:00 PM' },
+          { start: 'Wednesday at 10:00 AM', end: '11:00 AM' },
+          { start: 'Thursday at 01:00 PM', end: '02:00 PM' },
+        ]);
+      }
     } catch {
-      setAvailableSlots([
-        { start: 'Tomorrow at 02:00 PM', end: '03:00 PM' },
-        { start: 'Wednesday at 09:00 AM', end: '10:00 AM' },
-        { start: 'Wednesday at 01:00 PM', end: '02:00 PM' },
-        { start: 'Thursday at 11:00 AM', end: '12:00 PM' },
-      ]);
+      setAvailableSlots([]);
     }
   };
 
@@ -77,15 +65,18 @@ export default function AppointmentsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Appointments &amp; Dispatch</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Confirmed customer bookings synced with your Google Calendar.
+            Confirmed customer bookings synced with your real database &amp; Google Calendar.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Google Calendar Synced</span>
-          </span>
+          <Link
+            href="/dashboard/leads"
+            className="btn-primary py-2 px-4 text-xs font-semibold"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Book from Lead</span>
+          </Link>
         </div>
       </div>
 
@@ -120,10 +111,18 @@ export default function AppointmentsPage() {
           {appointments.length === 0 ? (
             <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-12 text-center space-y-3">
               <CalendarCheck className="w-10 h-10 text-slate-600 mx-auto" />
-              <h3 className="text-sm font-bold text-white">No upcoming appointments scheduled</h3>
-              <p className="text-xs text-slate-400">
-                When customers message your AI on WhatsApp or your website, confirmed bookings will appear here automatically.
+              <h3 className="text-sm font-bold text-white">No appointments scheduled yet</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                When customers message your AI on WhatsApp or your website chat, confirmed service bookings will appear here automatically.
               </p>
+              <div className="pt-2">
+                <Link
+                  href="/dashboard/leads"
+                  className="btn-secondary py-2 px-4 text-xs"
+                >
+                  View Customer Leads
+                </Link>
+              </div>
             </div>
           ) : (
             appointments.map((appt) => (
@@ -175,19 +174,23 @@ export default function AppointmentsPage() {
         {/* Sidebar: Next Open Time Slots */}
         <div className="lg:col-span-4 space-y-4">
           <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Open Dispatch Slots</h3>
-            <p className="text-[11px] text-slate-400">Your AI offers these upcoming slots to incoming customer inquiries.</p>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Open Dispatch Windows</h3>
+            <p className="text-[11px] text-slate-400">Your AI checks calendar availability and offers these open time slots to inquiries.</p>
 
             <div className="space-y-2">
-              {availableSlots.map((slot, i) => (
-                <div
-                  key={i}
-                  className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs flex items-center justify-between text-slate-300 font-medium"
-                >
-                  <span>{slot.start}</span>
-                  <span className="text-[10px] text-emerald-400 font-bold">Open</span>
-                </div>
-              ))}
+              {availableSlots.length === 0 ? (
+                <div className="text-xs text-slate-500 text-center py-4">No open slots configured.</div>
+              ) : (
+                availableSlots.map((slot, i) => (
+                  <div
+                    key={i}
+                    className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs flex items-center justify-between text-slate-300 font-medium"
+                  >
+                    <span>{slot.start}</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">Available</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

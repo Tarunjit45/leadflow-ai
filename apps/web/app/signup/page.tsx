@@ -121,6 +121,9 @@ export default function SignupPage() {
         if (res.business_id) {
           localStorage.setItem('leadflow_business_id', res.business_id);
         }
+        if (res.user) {
+          localStorage.setItem('leadflow_user', JSON.stringify(res.user));
+        }
         router.push('/onboarding');
       }
     } catch (err: any) {

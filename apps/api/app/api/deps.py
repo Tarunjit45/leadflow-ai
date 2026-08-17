@@ -13,15 +13,11 @@ async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    """Validates JWT and returns authenticated User."""
+    """Validates JWT and returns authenticated real User."""
     if not token:
-        # Fallback to demo user if no token in development mode
-        demo_user = db.query(User).filter(User.email == "demo@leadflow.ai").first()
-        if demo_user:
-            return demo_user
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication token required.",
+            detail="Authentication token required. Please sign in.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -29,16 +25,16 @@ async def get_current_user(
     if not payload or not payload.get("sub"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token.",
+            detail="Invalid or expired session token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     user = db.query(User).filter(User.id == payload["sub"]).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found.")
     
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated.")
 
     # Check session version for instant revocation upon logout or password change
     token_session_version = payload.get("session_version", 1)
@@ -57,23 +53,19 @@ async def get_current_business(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Business:
-    """Resolves authenticated tenant (Business) from current user's membership."""
+    """Resolves authenticated tenant (Business) from current user's real membership."""
     membership = (
         db.query(BusinessMember)
         .filter(BusinessMember.user_id == current_user.id)
         .first()
     )
     if not membership:
-        # Check if any business exists or create default
-        biz = db.query(Business).first()
-        if biz:
-            return biz
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No business workspace associated with this user.",
+            detail="No business workspace found for this account. Please complete setup.",
         )
     
     business = db.query(Business).filter(Business.id == membership.business_id).first()
     if not business:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business workspace not found.")
     return business

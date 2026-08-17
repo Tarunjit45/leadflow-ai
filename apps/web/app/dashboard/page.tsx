@@ -17,6 +17,7 @@ import {
   TrendingUp,
   ShieldCheck,
   Zap,
+  Plus,
 } from 'lucide-react';
 import { fetchApi } from '../../lib/api';
 
@@ -26,82 +27,26 @@ export default function DashboardHomePage() {
   const [agentStatus, setAgentStatus] = useState<'active' | 'paused'>('active');
   const [statusLoading, setStatusLoading] = useState(false);
 
-  // Metrics
+  // Real Metrics from Database
   const [metrics, setMetrics] = useState({
-    customersHelped: 24,
-    newLeads: 8,
-    appointmentsBooked: 5,
-    estimatedRevenue: 4250,
+    customersHelped: 0,
+    newLeads: 0,
+    appointmentsBooked: 0,
+    estimatedRevenue: 0,
   });
 
   // Attention Items
-  const [attentionItems, setAttentionItems] = useState<any[]>([
-    {
-      id: 'att_1',
-      customerName: 'Robert Miller',
-      phone: '+1 (512) 555-4412',
-      reason: 'Requested master plumber phone consultation for tankless install ($3,200)',
-      time: '15 min ago',
-      convId: 'conv_demo_2',
-    },
-  ]);
+  const [attentionItems, setAttentionItems] = useState<any[]>([]);
 
-  // Recent Customers Activity Stream
-  const [recentCustomers, setRecentCustomers] = useState<any[]>([
-    {
-      id: 'c1',
-      name: 'Sarah Jenkins',
-      phone: '+1 (512) 555-9821',
-      action: 'Booked diagnostic appointment for tomorrow at 10:00 AM',
-      service: 'Diagnostic Inspection',
-      time: '4 min ago',
-      status: 'booked',
-      isAi: true,
-    },
-    {
-      id: 'c2',
-      name: 'Robert Miller',
-      phone: '+1 (512) 555-4412',
-      action: 'Asked for custom quote on high-efficiency unit',
-      service: 'System Replacement',
-      time: '15 min ago',
-      status: 'human_review',
-      isAi: false,
-    },
-    {
-      id: 'c3',
-      name: 'Elena Vance',
-      phone: '+1 (512) 555-7731',
-      action: 'Received automated friendly follow-up for seasonal maintenance',
-      service: 'Maintenance Tune-up',
-      time: '1 hour ago',
-      status: 'nurturing',
-      isAi: true,
-    },
-    {
-      id: 'c4',
-      name: 'David Chen',
-      phone: '+1 (512) 555-3389',
-      action: 'Qualified diagnostic lead; requested quote by text message',
-      service: 'Refrigerant Diagnostic',
-      time: '3 hours ago',
-      status: 'qualified',
-      isAi: true,
-    },
-  ]);
+  // Recent Real Customers Activity Stream
+  const [recentCustomers, setRecentCustomers] = useState<any[]>([]);
 
   // Setup Progress Checklist
   const [setupProgress, setSetupProgress] = useState<any>({
-    completed_count: 4,
+    completed_count: 0,
     total_count: 5,
-    percentage: 80,
-    steps: [
-      { id: 'business', label: 'Business Profile', completed: true },
-      { id: 'services', label: 'Services & Prices', completed: true },
-      { id: 'agent', label: 'AI Employee Setup', completed: true },
-      { id: 'hours', label: 'Business Hours', completed: true },
-      { id: 'whatsapp', label: 'Connect WhatsApp Number', completed: false },
-    ],
+    percentage: 0,
+    steps: [],
   });
 
   const [greeting, setGreeting] = useState('Good morning');
@@ -112,12 +57,14 @@ export default function DashboardHomePage() {
     else if (hour < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
 
+    // 1. Load real business details
     fetchApi('/businesses/current')
       .then((data) => {
         if (data?.name) setBizName(data.name);
       })
       .catch(() => {});
 
+    // 2. Load real AI agent
     fetchApi('/agents/current')
       .then((data) => {
         if (data?.name) setAgentName(data.name);
@@ -125,21 +72,56 @@ export default function DashboardHomePage() {
       })
       .catch(() => {});
 
+    // 3. Load setup checklist
     fetchApi('/businesses/setup-progress')
       .then((data) => {
         if (data?.steps) setSetupProgress(data);
       })
       .catch(() => {});
 
+    // 4. Load real analytics summary
     fetchApi('/analytics/summary')
       .then((data) => {
         if (data) {
           setMetrics({
-            customersHelped: data.total_leads || 24,
-            newLeads: data.qualified_leads || 8,
-            appointmentsBooked: data.appointments_booked || 5,
-            estimatedRevenue: data.estimated_revenue_recovered || 4250,
+            customersHelped: data.total_leads || 0,
+            newLeads: data.qualified_leads || 0,
+            appointmentsBooked: data.appointments_booked || 0,
+            estimatedRevenue: data.estimated_revenue_recovered || 0,
           });
+        }
+      })
+      .catch(() => {});
+
+    // 5. Load real conversations for recent activity feed
+    fetchApi('/conversations/?limit=5')
+      .then((convs) => {
+        if (Array.isArray(convs)) {
+          const mapped = convs.map((c) => ({
+            id: c.id,
+            name: c.customer_name || c.customer_id || 'Inbound Lead',
+            phone: c.customer_id || '',
+            action: c.last_message_preview || 'New conversation started',
+            service: c.metadata?.service_needed || 'Inquiry',
+            time: new Date(c.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: c.status,
+            isAi: c.status !== 'human_takeover',
+          }));
+          setRecentCustomers(mapped);
+
+          // Find any conversation flagged for human review
+          const flagged = convs.filter((c) => c.status === 'human_takeover' || c.status === 'human_review');
+          if (flagged.length > 0) {
+            setAttentionItems([
+              {
+                id: flagged[0].id,
+                customerName: flagged[0].customer_name || flagged[0].customer_id,
+                phone: flagged[0].customer_id,
+                reason: flagged[0].last_message_preview || 'Customer requested human takeover',
+                convId: flagged[0].id,
+              },
+            ]);
+          }
         }
       })
       .catch(() => {});
@@ -168,10 +150,10 @@ export default function DashboardHomePage() {
               {greeting} 👋
             </div>
             <h1 className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {agentName} is {agentStatus === 'active' ? 'active & helping customers' : 'currently paused'}.
+              {agentName} is {agentStatus === 'active' ? 'active & ready to answer leads' : 'currently paused'}.
             </h1>
             <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Workspace: <strong className="text-slate-200 font-semibold">{bizName}</strong> • Real-time response on WhatsApp and Website chat.
+              Workspace: <strong className="text-slate-200 font-semibold">{bizName}</strong> • Operating on real live data across WhatsApp and Web.
             </p>
           </div>
 
@@ -205,13 +187,13 @@ export default function DashboardHomePage() {
           </div>
         </div>
 
-        {/* 4 Core Performance Metrics */}
+        {/* 4 Real Performance Metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-800/80">
           <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
             <div className="text-[11px] font-medium text-slate-400">Total Inquiries</div>
             <div className="text-2xl font-extrabold text-white">{metrics.customersHelped}</div>
             <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-              <Zap className="w-3 h-3" /> 100% replied in &lt; 2s
+              <Zap className="w-3 h-3" /> Live Real Data
             </div>
           </div>
 
@@ -232,12 +214,12 @@ export default function DashboardHomePage() {
             <div className="text-2xl font-extrabold text-emerald-400">
               ${metrics.estimatedRevenue.toLocaleString()}
             </div>
-            <div className="text-[10px] text-slate-400">From off-hours leads</div>
+            <div className="text-[10px] text-slate-400">From automated bookings</div>
           </div>
         </div>
       </div>
 
-      {/* Needs Attention Warning Box */}
+      {/* Needs Attention Warning Box (Only displays if real customer needs human review) */}
       {attentionItems.length > 0 && (
         <div className="rounded-3xl border border-amber-500/25 bg-amber-500/5 p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -246,8 +228,8 @@ export default function DashboardHomePage() {
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-white">1 Customer Needs Human Review</h2>
-                <p className="text-xs text-amber-300/80">AI safely requested human review for high-value custom request.</p>
+                <h2 className="text-sm font-bold text-white">Customer Conversation Needs Review</h2>
+                <p className="text-xs text-amber-300/80">AI flagged this conversation for human attention.</p>
               </div>
             </div>
             <Link
@@ -286,55 +268,73 @@ export default function DashboardHomePage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight">Recent Customer Activity</h2>
-              <p className="text-xs text-slate-400">Live feed of inquiries handled by your AI employee.</p>
+              <p className="text-xs text-slate-400">Live feed of real inquiries handled by your AI employee.</p>
             </div>
             <Link
               href="/dashboard/leads"
               className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1"
             >
-              <span>View all leads</span>
+              <span>View all in inbox</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {recentCustomers.map((c) => (
-              <div
-                key={c.id}
-                className="p-4 rounded-2xl bg-[#0e131f] border border-slate-800/80 hover:border-slate-700/80 transition-colors duration-150 flex items-start justify-between gap-4"
-              >
-                <div className="flex items-start gap-3.5">
-                  <div className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 font-bold text-xs text-slate-300">
-                    {c.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">{c.name}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">{c.phone}</span>
-                      {c.isAi && (
-                        <span className="px-1.5 py-0.2 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-semibold">
-                          AI Handled
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">{c.action}</p>
-                    <div className="text-[10px] text-slate-500 flex items-center gap-2">
-                      <span>Service: <strong className="text-slate-400">{c.service}</strong></span>
-                      <span>•</span>
-                      <span>{c.time}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <Link
-                  href="/dashboard/leads"
-                  className="btn-secondary py-1.5 px-3 text-[11px] font-semibold shrink-0"
-                >
-                  View Details
+          {recentCustomers.length === 0 ? (
+            <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-8 text-center space-y-3">
+              <MessageSquare className="w-8 h-8 text-slate-600 mx-auto" />
+              <h3 className="text-sm font-bold text-white">No incoming customer inquiries yet</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                When a customer sends a message on WhatsApp or through your website chat widget, their conversation will appear here in real-time.
+              </p>
+              <div className="pt-2 flex justify-center gap-3">
+                <Link href="/dashboard/agent" className="btn-primary py-2 px-4 text-xs">
+                  Test AI in Studio
+                </Link>
+                <Link href="/dashboard/settings?tab=channels" className="btn-secondary py-2 px-4 text-xs">
+                  Connect Channels
                 </Link>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentCustomers.map((c) => (
+                <div
+                  key={c.id}
+                  className="p-4 rounded-2xl bg-[#0e131f] border border-slate-800/80 hover:border-slate-700/80 transition-colors duration-150 flex items-start justify-between gap-4"
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 font-bold text-xs text-slate-300">
+                      {c.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-white">{c.name}</span>
+                        <span className="text-[10px] text-slate-500 font-mono">{c.phone}</span>
+                        {c.isAi && (
+                          <span className="px-1.5 py-0.2 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-semibold">
+                            AI Handled
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">{c.action}</p>
+                      <div className="text-[10px] text-slate-500 flex items-center gap-2">
+                        <span>Service: <strong className="text-slate-400">{c.service}</strong></span>
+                        <span>•</span>
+                        <span>{c.time}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    href="/dashboard/leads"
+                    className="btn-secondary py-1.5 px-3 text-[11px] font-semibold shrink-0"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Setup Checklist & Channels */}
@@ -343,18 +343,18 @@ export default function DashboardHomePage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <h3 className="text-sm font-bold text-white">Setup Checklist</h3>
-                <span className="text-xs font-bold text-blue-400">{setupProgress.percentage}%</span>
+                <span className="text-xs font-bold text-blue-400">{setupProgress.percentage || 0}%</span>
               </div>
               <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
                 <div
                   className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                  style={{ width: `${setupProgress.percentage}%` }}
+                  style={{ width: `${setupProgress.percentage || 0}%` }}
                 />
               </div>
             </div>
 
             <div className="space-y-2.5">
-              {setupProgress.steps.map((step: any) => (
+              {(setupProgress.steps || []).map((step: any) => (
                 <div key={step.id} className="flex items-center justify-between text-xs">
                   <span className={step.completed ? 'text-slate-300 font-medium' : 'text-slate-400'}>
                     {step.label}
@@ -376,20 +376,20 @@ export default function DashboardHomePage() {
             </div>
           </div>
 
-          {/* Quick Sandbox Tester */}
+          {/* Quick AI Studio Action */}
           <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-3">
             <div className="flex items-center gap-2 text-white font-bold text-sm">
               <Bot className="w-4 h-4 text-blue-400" />
-              <span>Test Your AI Employee</span>
+              <span>Test AI Employee Live</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Want to see how your AI answers questions or quotes prices? Test it in the live studio.
+              Ask your AI employee real questions or test pricing accuracy in the interactive studio.
             </p>
             <Link
               href="/dashboard/agent"
               className="btn-primary w-full py-2.5 text-xs font-bold text-center"
             >
-              Open AI Test Studio
+              Open AI Studio
             </Link>
           </div>
         </div>

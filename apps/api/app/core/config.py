@@ -8,11 +8,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "LeadFlow AI API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    ENVIRONMENT: str = "production"
+    DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
-    # App & API Base URLs (Easily changed by setting APP_URL / API_URL when you buy a domain)
+    # App & API Base URLs
     APP_URL: str = (
         os.getenv("APP_URL")
         or os.getenv("NEXT_PUBLIC_APP_URL")
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
         or "http://localhost:8000"
     )
 
-    # Dynamic CORS Origins (Permits local, cloud deployments, and custom domain automatically)
+    # Dynamic CORS Origins
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     AI_FALLBACK_MODEL: str = "anthropic/claude-3-haiku"
 
-    # Google Integrations (OAuth & Calendar & Sheets - Automatically derived from API_URL)
+    # Google Integrations (OAuth & Calendar & Sheets)
     GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET")
     GOOGLE_REDIRECT_URI: str = (
@@ -74,15 +74,12 @@ class Settings(BaseSettings):
     META_PHONE_NUMBER_ID: Optional[str] = os.getenv("META_PHONE_NUMBER_ID", "1265571813306233")
     META_WABA_ID: Optional[str] = os.getenv("META_WABA_ID")
 
-    # =========================================================================
-    # PAYMENT PROVIDER ABSTRACTION (Primary: Dodo Payments)
-    # =========================================================================
+    # Payment Provider Abstraction (Dodo Payments)
     PAYMENT_PROVIDER: str = "dodo"
     BILLING_CURRENCY: str = "USD"
     TRIAL_PERIOD_DAYS: int = 7
     BILLING_GRACE_PERIOD_DAYS: int = 3
 
-    # Dodo Payments Configuration (Configured in Test Mode)
     DODO_PAYMENTS_API_KEY: Optional[str] = os.getenv("DODO_PAYMENTS_API_KEY")
     DODO_PAYMENTS_WEBHOOK_KEY: Optional[str] = os.getenv("DODO_PAYMENTS_WEBHOOK_KEY")
     DODO_PAYMENTS_ENVIRONMENT: str = "test_mode"
@@ -96,9 +93,9 @@ class Settings(BaseSettings):
     STRIPE_PRICE_STARTER_MONTHLY: str = "price_starter_monthly_99"
     STRIPE_PRICE_GROWTH_MONTHLY: str = "price_growth_monthly_199"
 
-    # Demo Mode
-    ENABLE_DEMO_MODE: bool = True
-    DEMO_BUSINESS_ID: str = "biz_demo_hvac_001"
+    # Production Mode (Demo mode strictly disabled)
+    ENABLE_DEMO_MODE: bool = False
+    DEMO_BUSINESS_ID: str = ""
 
     model_config = {
         "env_file": ".env",
