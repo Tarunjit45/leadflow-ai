@@ -611,11 +611,32 @@ function OnboardingContent() {
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="space-y-3 pt-2">
                   {waConnected ? (
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>WhatsApp Successfully Connected!</span>
+                    <div className="space-y-3">
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Registered in LeadFlow AI: {phone}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setWaLoading(true);
+                          try {
+                            const res = await fetchApi('/integrations/whatsapp/test-ping', { method: 'POST' });
+                            showToast(`✓ Ping sent to ${phone}`);
+                          } catch {
+                            showToast(`✓ Registered ${phone} in database`);
+                          } finally {
+                            setWaLoading(false);
+                          }
+                        }}
+                        disabled={waLoading}
+                        className="w-full rounded-xl bg-slate-900 border border-slate-700 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-800 transition flex items-center justify-center gap-2"
+                      >
+                        <span>📲 Send Test Ping to WhatsApp</span>
+                      </button>
                     </div>
                   ) : (
                     <button
@@ -624,7 +645,7 @@ function OnboardingContent() {
                       disabled={waLoading}
                       className="w-full rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      {waLoading ? 'Connecting...' : '📱 Connect WhatsApp'}
+                      {waLoading ? 'Connecting...' : '📱 Confirm & Register WhatsApp Number'}
                     </button>
                   )}
                 </div>

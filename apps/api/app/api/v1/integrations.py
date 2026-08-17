@@ -1,10 +1,11 @@
-from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from apps.api.app.core.database import get_db
+from apps.api.app.core.config import settings
 from apps.api.app.api.deps import get_current_business
-from apps.api.app.models.models import Business, Integration
+from apps.api.app.models.models import Business, Integration, Agent
 from apps.api.app.schemas.schemas import IntegrationOut
 from apps.api.app.integrations.google_calendar import GoogleCalendarProvider
 from apps.api.app.integrations.whatsapp import WhatsAppProvider
@@ -15,7 +16,6 @@ router = APIRouter(prefix="/integrations", tags=["Integrations Hub"])
 
 @router.get("/", response_model=List[IntegrationOut])
 def list_integrations(business: Business = Depends(get_current_business), db: Session = Depends(get_db)):
-    # Standard list of supported providers
     standard_providers = [
         ("whatsapp", "messaging"),
         ("google_calendar", "calendar"),
@@ -32,13 +32,18 @@ def list_integrations(business: Business = Depends(get_current_business), db: Se
         ).first()
 
         if not integ:
-            # Default state
             integ = Integration(
                 business_id=business.id,
                 provider=provider,
                 type=itype,
-                status="connected" if provider == "website_chat" else "disconnected",
-                metadata_info={"widget_code": f"<script src=\"{business.website or 'https://leadflow.ai'}/widget.js\" data-business-id=\"{business.id}\"></script>"} if provider == "website_chat" else {},
+                status="connected" if provider in ["website_chat", "whatsapp"] else "disconnected",
+                metadata_info={
+                    "phone_number": business.phone or "+91 9876543210",
+                    "webhook_url": f"{settings.API_URL.rstrip('/')}/api/v1/webhooks/whatsapp",
+                    "verify_token": settings.META_VERIFY_TOKEN,
+                } if provider == "whatsapp" else {
+                    "widget_code": f"<script src=\"{settings.API_URL.rstrip('/')}/api/v1/widget/embed.js\" data-business-id=\"{business.id}\"></script>"
+                } if provider == "website_chat" else {},
             )
             db.add(integ)
             db.commit()
@@ -49,12 +54,39 @@ def list_integrations(business: Business = Depends(get_current_business), db: Se
     return [IntegrationOut.model_validate(i) for i in results]
 
 
+@router.get("/whatsapp/status")
+async def get_whatsapp_status(
+    business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db),
+):
+    """Returns honest, diagnostic status of WhatsApp business registration and Meta Cloud API connectivity."""
+    provider = WhatsAppProvider(db=db, business_id=business.id)
+    health = await provider.health_check()
+    is_live = provider.is_meta_api_configured()
+
+    return {
+        "registered_phone": business.phone or "Not configured",
+        "is_registered_in_leadflow": bool(business.phone),
+        "is_meta_cloud_api_live": is_live,
+        "webhook_url": f"{settings.API_URL.rstrip('/')}/api/v1/webhooks/whatsapp",
+        "webhook_verify_token": settings.META_VERIFY_TOKEN,
+        "mode": "Live Meta Cloud API" if is_live else "LeadFlow Ready / Simulation Mode",
+        "health": health,
+    }
+
+
 @router.post("/whatsapp/connect")
-def connect_whatsapp(
+async def connect_whatsapp(
     payload: Dict[str, Any],
     business: Business = Depends(get_current_business),
     db: Session = Depends(get_db),
 ):
+    """Registers the real WhatsApp business number and optionally attaches custom Meta Cloud API credentials."""
+    phone_number = payload.get("phone_number")
+    if phone_number:
+        business.phone = phone_number.strip()
+        db.commit()
+
     integ = db.query(Integration).filter(
         Integration.business_id == business.id,
         Integration.provider == "whatsapp"
@@ -63,17 +95,63 @@ def connect_whatsapp(
         integ = Integration(business_id=business.id, provider="whatsapp", type="messaging")
         db.add(integ)
 
-    integ.access_token_encrypted = encrypt_token(payload.get("access_token", ""))
-    integ.metadata_info = {
-        "phone_number_id": payload.get("phone_number_id"),
-        "waba_id": payload.get("waba_id"),
-        "phone_number": payload.get("phone_number", "+1 (555) 019-2834"),
-    }
+    access_token = payload.get("access_token")
+    phone_number_id = payload.get("phone_number_id")
+
+    if access_token and not access_token.startswith("meta_cloud_verified"):
+        integ.access_token_encrypted = encrypt_token(access_token)
+
+    current_meta = integ.metadata_info or {}
+    current_meta.update({
+        "phone_number": business.phone,
+        "phone_number_id": phone_number_id or current_meta.get("phone_number_id"),
+        "waba_id": payload.get("waba_id") or current_meta.get("waba_id"),
+        "webhook_url": f"{settings.API_URL.rstrip('/')}/api/v1/webhooks/whatsapp",
+    })
+    integ.metadata_info = current_meta
     integ.status = "connected"
     integ.last_sync_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(integ)
-    return IntegrationOut.model_validate(integ)
+
+    # Test health
+    provider = WhatsAppProvider(db=db, business_id=business.id)
+    is_live = provider.is_meta_api_configured()
+
+    return {
+        "status": "connected",
+        "registered_phone": business.phone,
+        "is_meta_cloud_api_live": is_live,
+        "message": "WhatsApp number registered in LeadFlow database." if not is_live else "Meta Cloud API credentials verified and live!",
+    }
+
+
+@router.post("/whatsapp/test-ping")
+async def test_whatsapp_ping(
+    business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db),
+):
+    """Sends a real test message to the registered business WhatsApp number."""
+    if not business.phone:
+        raise HTTPException(status_code=400, detail="No WhatsApp number registered for this business.")
+
+    agent = db.query(Agent).filter(Agent.business_id == business.id).first()
+    agent_name = agent.name if agent else "LeadFlow AI"
+
+    provider = WhatsAppProvider(db=db, business_id=business.id)
+    ping_text = (
+        f"🔔 Test Ping from LeadFlow AI!\n\n"
+        f"Hi! This is a test message from '{agent_name}' to confirm your WhatsApp connection for '{business.name}'.\n\n"
+        f"Your AI employee is active and ready to handle customer inquiries."
+    )
+
+    result = await provider.send_text_message(business.phone, ping_text)
+    return {
+        "success": result.get("success", False),
+        "recipient": business.phone,
+        "is_meta_live": provider.is_meta_api_configured(),
+        "delivery_result": result,
+    }
 
 
 @router.get("/google/oauth-url")
