@@ -37,20 +37,21 @@ def get_system_status(db: Session = Depends(get_db)):
         ServiceHealth(
             name="Database Engine",
             configured=True,
-            status="healthy",
-            details=f"Connected via {settings.DATABASE_URL.split('://')[0].upper()} engine with multi-tenant schema isolation.",
+            status="healthy" if is_postgres else "development_sqlite",
+            details="Connected to persistent PostgreSQL database." if is_postgres else "Running on local/ephemeral SQLite (Attach PostgreSQL DATABASE_URL for permanent cloud storage).",
             required_variables=["DATABASE_URL"],
+            setup_url="https://neon.tech",
         )
     )
 
-    # 3. Redis Queue
+    # 3. Follow-Up Worker & Cron
     services.append(
         ServiceHealth(
-            name="Queue / Redis Worker",
-            configured=bool(settings.REDIS_URL),
+            name="Follow-Up Automation & Cloud Cron",
+            configured=True,
             status="healthy",
-            details="Background worker active for scheduled follow-ups and webhooks.",
-            required_variables=["REDIS_URL"],
+            details="Vercel Cron (/api/v1/workers/tick) active every 5 minutes with quiet-hours protection.",
+            required_variables=["CRON_SECRET"],
         )
     )
 

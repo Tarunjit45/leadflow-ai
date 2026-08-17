@@ -27,7 +27,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database (PostgreSQL in production / SQLite local fallback)
-    DATABASE_URL: str = "sqlite:///./leadflow_local.db"
+    DATABASE_URL: str = (
+        "sqlite:////tmp/leadflow_local.db"
+        if os.getenv("VERCEL")
+        else "sqlite:///./leadflow_local.db"
+    )
     
     # Redis Queue
     REDIS_URL: str = "redis://localhost:6379/0"

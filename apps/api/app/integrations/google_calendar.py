@@ -45,7 +45,6 @@ class GoogleCalendarProvider(BaseIntegrationProvider):
         url = "https://oauth2.googleapis.com/token"
         payload = {
             "client_id": settings.GOOGLE_CLIENT_ID,
-            "client_id": settings.GOOGLE_CLIENT_ID,
             "client_secret": settings.GOOGLE_CLIENT_SECRET,
             "code": code,
             "grant_type": "authorization_code",

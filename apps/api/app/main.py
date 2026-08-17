@@ -1,4 +1,28 @@
+import os
+import sys
+import types
 import logging
+
+# Ensure root repository directory and app parent are on sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+root_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
+
+for p in [parent_dir, root_dir]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+# Universal alias for serverless deployments where apps/api is root
+if "apps" not in sys.modules:
+    import app as app_pkg
+    apps_pkg = types.ModuleType("apps")
+    api_pkg = types.ModuleType("apps.api")
+    apps_pkg.api = api_pkg
+    api_pkg.app = app_pkg
+    sys.modules["apps"] = apps_pkg
+    sys.modules["apps.api"] = api_pkg
+    sys.modules["apps.api.app"] = app_pkg
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +43,7 @@ from apps.api.app.api.v1 import (
     test_console,
     widget,
     admin,
+    workers,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -41,6 +66,12 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc",
     lifespan=lifespan,
 )
+
+# Ensure schema exists on cold start
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    logger.warning(f"Database schema auto-creation notice: {str(e)}")
 
 # CORS configuration
 app.add_middleware(
@@ -66,6 +97,7 @@ app.include_router(billing.router, prefix=settings.API_V1_STR)
 app.include_router(test_console.router, prefix=settings.API_V1_STR)
 app.include_router(widget.router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix=settings.API_V1_STR)
+app.include_router(workers.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
