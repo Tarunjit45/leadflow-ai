@@ -68,13 +68,13 @@ class Settings(BaseSettings):
     )
 
     # Meta WhatsApp Cloud API & Embedded Signup
-    META_APP_ID: Optional[str] = os.getenv("META_APP_ID")
-    META_APP_SECRET: Optional[str] = os.getenv("META_APP_SECRET")
+    META_APP_ID: Optional[str] = os.getenv("META_APP_ID", "1753893495945396")
+    META_APP_SECRET: Optional[str] = os.getenv("META_APP_SECRET", "861de09805610a7c295f933714829aff")
     META_CONFIG_ID: Optional[str] = os.getenv("META_CONFIG_ID", "1070129732436618")  # Facebook Login for Business configuration ID
     META_VERIFY_TOKEN: str = os.getenv("META_VERIFY_TOKEN", "leadflow_whatsapp_webhook_verification_token_secret")
     META_ACCESS_TOKEN: Optional[str] = os.getenv("META_ACCESS_TOKEN")
     META_PHONE_NUMBER_ID: Optional[str] = os.getenv("META_PHONE_NUMBER_ID", "1265571813306233")
-    META_WABA_ID: Optional[str] = os.getenv("META_WABA_ID")
+    META_WABA_ID: Optional[str] = os.getenv("META_WABA_ID", "28277710628584284")
 
     # Payment Provider Abstraction (Dodo Payments)
     PAYMENT_PROVIDER: str = "dodo"

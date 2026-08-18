@@ -65,7 +65,7 @@ export default function MetaWhatsAppEmbeddedSignupButton({
     if (window.FB) {
       try {
         window.FB.init({
-          appId: appId || '1265571813306233',
+          appId: appId || '1753893495945396',
           autoLogAppEvents: true,
           xfbml: true,
           version: 'v21.0',
@@ -76,7 +76,7 @@ export default function MetaWhatsAppEmbeddedSignupButton({
 
     window.fbAsyncInit = function () {
       window.FB.init({
-        appId: appId || '1265571813306233',
+        appId: appId || '1753893495945396',
         autoLogAppEvents: true,
         xfbml: true,
         version: 'v21.0',
