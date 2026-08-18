@@ -161,6 +161,79 @@ def get_google_oauth_url(business: Business = Depends(get_current_business)):
     return {"url": url}
 
 
+@router.get("/google/callback")
+async def google_oauth_callback(
+    code: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Handles Google OAuth authorization code redirect and stores tokens for the business."""
+    from fastapi.responses import RedirectResponse
+    
+    redirect_target = f"{settings.APP_URL}/dashboard/settings?tab=channels"
+    
+    if error or not code or not state:
+        logger.warning(f"Google OAuth failed or cancelled: error={error}")
+        return RedirectResponse(url=f"{redirect_target}&calendar_error=true")
+
+    business_id = state.strip()
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        logger.error(f"Business '{business_id}' from Google OAuth state not found.")
+        return RedirectResponse(url=f"{redirect_target}&calendar_error=not_found")
+
+    try:
+        gcal = GoogleCalendarProvider()
+        tokens = await gcal.exchange_code_for_tokens(code)
+        
+        integ = db.query(Integration).filter(
+            Integration.business_id == business.id,
+            Integration.provider == "google_calendar"
+        ).first()
+        if not integ:
+            integ = Integration(
+                business_id=business.id,
+                provider="google_calendar",
+                type="calendar"
+            )
+            db.add(integ)
+
+        if tokens.get("access_token"):
+            integ.access_token_encrypted = encrypt_token(tokens["access_token"])
+        if tokens.get("refresh_token"):
+            integ.refresh_token_encrypted = encrypt_token(tokens["refresh_token"])
+        
+        integ.status = "connected"
+        integ.last_sync_at = datetime.now(timezone.utc)
+        integ.metadata_info = {"calendar_id": "primary", "scope": tokens.get("scope", "")}
+        db.commit()
+        
+        logger.info(f"✓ Google Calendar connected for business {business.name} ({business.id})")
+        return RedirectResponse(url=f"{redirect_target}&calendar_connected=true")
+    except Exception as e:
+        logger.error(f"Failed to exchange Google OAuth code: {e}")
+        return RedirectResponse(url=f"{redirect_target}&calendar_error=exchange_failed")
+
+
+@router.get("/google/status")
+def get_google_status(
+    business: Business = Depends(get_current_business),
+    db: Session = Depends(get_db),
+):
+    integ = db.query(Integration).filter(
+        Integration.business_id == business.id,
+        Integration.provider == "google_calendar"
+    ).first()
+    is_connected = bool(integ and integ.status == "connected" and integ.access_token_encrypted)
+    return {
+        "provider": "google_calendar",
+        "status": "connected" if is_connected else "disconnected",
+        "calendar_id": integ.metadata_info.get("calendar_id", "primary") if integ and integ.metadata_info else "primary",
+        "last_sync_at": integ.last_sync_at.isoformat() if integ and integ.last_sync_at else None,
+    }
+
+
 @router.post("/disconnect/{provider}")
 def disconnect_integration(
     provider: str,

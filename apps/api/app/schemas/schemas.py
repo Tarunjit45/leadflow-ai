@@ -86,12 +86,16 @@ class BusinessUpdate(BaseModel):
     industry: Optional[str] = None
     website: Optional[str] = None
     phone: Optional[str] = None
+    owner_phone: Optional[str] = None
+    customer_whatsapp_number: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
     timezone: Optional[str] = None
     description: Optional[str] = None
     average_job_value: Optional[float] = None
     onboarding_completed: Optional[bool] = None
+    onboarding_step: Optional[int] = None
+    onboarding_state: Optional[Dict[str, Any]] = None
 
 
 class BusinessOut(BaseModel):
@@ -100,6 +104,8 @@ class BusinessOut(BaseModel):
     industry: Optional[str] = None
     website: Optional[str] = None
     phone: Optional[str] = None
+    owner_phone: Optional[str] = None
+    customer_whatsapp_number: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
     timezone: str
@@ -107,15 +113,24 @@ class BusinessOut(BaseModel):
     status: str
     average_job_value: float
     onboarding_completed: bool
+    onboarding_step: int = 1
+    onboarding_state: Dict[str, Any] = {}
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class OnboardingStepPayload(BaseModel):
+    step: int
+    data: Dict[str, Any]
 
 
 class OnboardingPayload(BaseModel):
     business_name: str
     industry: str
     website: Optional[str] = None
+    owner_phone: Optional[str] = None
+    customer_whatsapp_number: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     timezone: str = "America/New_York"
@@ -125,6 +140,9 @@ class OnboardingPayload(BaseModel):
     service_areas: List[str] = []
     agent_name: str = "LeadFlow AI Sales Assistant"
     agent_role: str = "AI Sales & Appointment Booker"
+    agent_tone: str = "friendly"
+    agent_responsibilities: List[str] = []
+    custom_knowledge: Optional[str] = None
 
 
 # --- Knowledge Schemas ---

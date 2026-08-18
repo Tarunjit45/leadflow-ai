@@ -58,7 +58,9 @@ class Business(Base):
     name = Column(String(255), nullable=False)
     industry = Column(String(100), default="Home Services (HVAC/Plumbing/Electrical)")
     website = Column(String(255), nullable=True)
-    phone = Column(String(50), nullable=True)
+    phone = Column(String(50), nullable=True)  # Business contact phone
+    owner_phone = Column(String(50), nullable=True)  # Verified personal WhatsApp number of the Business Owner (for alerts & control)
+    customer_whatsapp_number = Column(String(50), nullable=True)  # Customer-facing WhatsApp Business number
     email = Column(String(255), nullable=True)
     address = Column(String(500), nullable=True)
     timezone = Column(String(100), default="America/New_York")
@@ -66,6 +68,8 @@ class Business(Base):
     status = Column(String(50), default="active")  # active, suspended, trial
     average_job_value = Column(Float, default=850.0)  # For estimated revenue recovery calculations
     onboarding_completed = Column(Boolean, default=False)
+    onboarding_step = Column(Integer, default=1)  # 1 to 10
+    onboarding_state = Column(JSON, default=dict)  # Persistent draft step state
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
