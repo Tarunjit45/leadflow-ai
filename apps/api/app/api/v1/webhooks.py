@@ -31,7 +31,9 @@ def verify_whatsapp_webhook(
         challenge=hub_challenge or "",
     )
     if challenge:
+        logger.info("✓ Meta WhatsApp Webhook Challenge verified successfully.")
         return Response(content=challenge, media_type="text/plain")
+    logger.warning(f"Meta webhook verification token mismatch. Received token: '{hub_verify_token}'")
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Verification token mismatch.")
 
 
@@ -40,12 +42,13 @@ async def receive_whatsapp_message(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    """Processes inbound Meta WhatsApp Cloud API webhooks with idempotency."""
+    """Processes inbound Meta WhatsApp Cloud API webhooks with idempotency and multi-tenant routing."""
     raw_body = await request.body()
     sig_header = request.headers.get("X-Hub-Signature-256")
     
     whatsapp = WhatsAppProvider()
     if not whatsapp.verify_payload_signature(raw_body, sig_header):
+        logger.warning("Invalid WhatsApp webhook HMAC-SHA256 signature received.")
         raise HTTPException(status_code=403, detail="Invalid webhook signature.")
 
     try:
@@ -62,9 +65,12 @@ async def receive_whatsapp_message(
             value = change.get("value", {})
             messages = value.get("messages", [])
             contacts = value.get("contacts", [])
+            metadata = value.get("metadata", {})
 
             contact_name = contacts[0].get("profile", {}).get("name") if contacts else "WhatsApp Lead"
-            phone_number_id = value.get("metadata", {}).get("phone_number_id")
+            phone_number_id = metadata.get("phone_number_id")
+            display_phone_number = metadata.get("display_phone_number", "")
+            clean_display_phone = "".join(filter(str.isdigit, display_phone_number))
 
             for msg in messages:
                 msg_id = msg.get("id")
@@ -77,6 +83,7 @@ async def receive_whatsapp_message(
                 mark_event_processed("whatsapp", msg_id)
 
                 if msg_type != "text":
+                    logger.info(f"Ignoring non-text message type '{msg_type}' from {from_number}")
                     continue
 
                 text_content = msg.get("text", {}).get("body", "").strip()
@@ -98,25 +105,40 @@ async def receive_whatsapp_message(
                             business = i.business
                             break
 
-                # Fallback: match by business numbers
-                if not business:
+                # 2. Match by recipient business number (display_phone_number in metadata)
+                if not business and clean_display_phone:
                     all_b = db.query(Business).all()
                     for b in all_b:
                         clean_c_phone = "".join(filter(str.isdigit, b.customer_whatsapp_number or b.phone or ""))
+                        if clean_c_phone and len(clean_c_phone) >= 7:
+                            if clean_display_phone.endswith(clean_c_phone) or clean_c_phone.endswith(clean_display_phone):
+                                business = b
+                                break
+
+                # 3. Match by owner's registered phone (for owner WhatsApp control mode)
+                if not business and clean_from:
+                    all_b = db.query(Business).all()
+                    for b in all_b:
                         clean_o_phone = "".join(filter(str.isdigit, b.owner_phone or ""))
-                        if (clean_c_phone and len(clean_c_phone) >= 7 and clean_from.endswith(clean_c_phone)) or \
-                           (clean_o_phone and len(clean_o_phone) >= 7 and clean_from.endswith(clean_o_phone)):
-                            business = b
-                            break
+                        if clean_o_phone and len(clean_o_phone) >= 7:
+                            if clean_from.endswith(clean_o_phone) or clean_o_phone.endswith(clean_from):
+                                business = b
+                                break
+
+                # 4. Fallback if single business tenant in database
+                if not business:
+                    count_b = db.query(Business).count()
+                    if count_b == 1:
+                        business = db.query(Business).first()
 
                 if not business:
                     logger.warning(
                         f"⚠️ Unmapped WhatsApp message received for phone_number_id '{phone_number_id}' "
-                        f"from sender '{from_number}'. Dropping message to guarantee strict multi-tenant isolation."
+                        f"display_phone '{display_phone_number}' from sender '{from_number}'."
                     )
                     continue
 
-                # 2. Strict Role Separation: Is the sender the verified Business Owner?
+                # 5. Strict Role Separation: Is the sender the verified Business Owner?
                 is_owner = False
                 clean_owner = "".join(filter(str.isdigit, business.owner_phone or ""))
                 if clean_owner and len(clean_owner) >= 7:
@@ -167,7 +189,8 @@ async def receive_whatsapp_message(
                         owner_message_text=text_content,
                     )
                     if owner_res.get("response_text"):
-                        await tenant_whatsapp.send_text_message(from_number, owner_res["response_text"])
+                        send_res = await tenant_whatsapp.send_text_message(from_number, owner_res["response_text"])
+                        logger.info(f"Delivered owner reply to {from_number}: {send_res}")
                 else:
                     agent_res = await runtime.process_incoming_message(
                         business_id=business.id,
@@ -176,7 +199,8 @@ async def receive_whatsapp_message(
                         sender_type="customer",
                     )
                     if agent_res.get("response_text"):
-                        await tenant_whatsapp.send_text_message(from_number, agent_res["response_text"])
+                        send_res = await tenant_whatsapp.send_text_message(from_number, agent_res["response_text"])
+                        logger.info(f"Delivered AI reply to customer {from_number}: {send_res}")
 
     return {"status": "processed"}
 
