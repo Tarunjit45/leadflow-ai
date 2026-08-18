@@ -5,13 +5,12 @@ function getApiBaseUrl(): string {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
   }
   if (typeof window !== 'undefined') {
-    // If running on custom domain or cloud host on standard ports (e.g. 443 / 80)
-    if (window.location.port === '3000') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:8000';
     }
-    return window.location.origin;
+    return 'https://leadflow-api-l23m.onrender.com';
   }
-  return 'http://localhost:8000';
+  return 'https://leadflow-api-l23m.onrender.com';
 }
 
 function getAuthHeader(): Record<string, string> {
@@ -22,7 +21,8 @@ function getAuthHeader(): Record<string, string> {
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const base = getApiBaseUrl();
-  const url = `${base}/api/v1${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${base}/api/v1${cleanEndpoint}`;
   const headers = {
     'Content-Type': 'application/json',
     ...getAuthHeader(),
