@@ -67,9 +67,10 @@ class Settings(BaseSettings):
         or f"{os.getenv('API_URL', 'http://localhost:8000').rstrip('/')}/api/v1/integrations/google/callback"
     )
 
-    # Meta WhatsApp Cloud API
+    # Meta WhatsApp Cloud API & Embedded Signup
     META_APP_ID: Optional[str] = os.getenv("META_APP_ID")
     META_APP_SECRET: Optional[str] = os.getenv("META_APP_SECRET")
+    META_CONFIG_ID: Optional[str] = os.getenv("META_CONFIG_ID")  # Facebook Login for Business configuration ID
     META_VERIFY_TOKEN: str = os.getenv("META_VERIFY_TOKEN", "leadflow_whatsapp_webhook_verification_token_secret")
     META_ACCESS_TOKEN: Optional[str] = os.getenv("META_ACCESS_TOKEN")
     META_PHONE_NUMBER_ID: Optional[str] = os.getenv("META_PHONE_NUMBER_ID", "1265571813306233")

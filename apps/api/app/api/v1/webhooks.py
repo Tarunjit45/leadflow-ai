@@ -85,20 +85,30 @@ async def receive_whatsapp_message(
 
                 clean_from = "".join(filter(str.isdigit, from_number))
                 
-                # 1. Match business by owner phone number
-                all_businesses = db.query(Business).all()
+                # 1. Authoritative Multi-Tenant Business Resolution via phone_number_id
                 business = None
-                is_owner = False
-
-                for b in all_businesses:
-                    clean_b_phone = "".join(filter(str.isdigit, b.phone or ""))
-                    if clean_b_phone and len(clean_b_phone) >= 7:
-                        if clean_from.endswith(clean_b_phone) or clean_b_phone.endswith(clean_from):
-                            business = b
-                            is_owner = True
+                if phone_number_id:
+                    integrations = db.query(Integration).filter(
+                        Integration.provider == "whatsapp",
+                        Integration.status == "connected"
+                    ).all()
+                    for i in integrations:
+                        m = i.metadata_info or {}
+                        if str(m.get("phone_number_id")) == str(phone_number_id):
+                            business = i.business
                             break
 
-                # 2. If not matched to owner, find the active tenant business
+                # Fallback: match by business numbers
+                if not business:
+                    all_b = db.query(Business).all()
+                    for b in all_b:
+                        clean_c_phone = "".join(filter(str.isdigit, b.customer_whatsapp_number or b.phone or ""))
+                        clean_o_phone = "".join(filter(str.isdigit, b.owner_phone or ""))
+                        if (clean_c_phone and len(clean_c_phone) >= 7 and clean_from.endswith(clean_c_phone)) or \
+                           (clean_o_phone and len(clean_o_phone) >= 7 and clean_from.endswith(clean_o_phone)):
+                            business = b
+                            break
+
                 if not business:
                     business = (
                         db.query(Business)
@@ -110,6 +120,13 @@ async def receive_whatsapp_message(
                     business = db.query(Business).order_by(Business.created_at.desc()).first()
                 if not business:
                     continue
+
+                # 2. Strict Role Separation: Is the sender the verified Business Owner?
+                is_owner = False
+                clean_owner = "".join(filter(str.isdigit, business.owner_phone or ""))
+                if clean_owner and len(clean_owner) >= 7:
+                    if clean_from.endswith(clean_owner) or clean_owner.endswith(clean_from):
+                        is_owner = True
 
                 conv = db.query(Conversation).filter(
                     Conversation.business_id == business.id,

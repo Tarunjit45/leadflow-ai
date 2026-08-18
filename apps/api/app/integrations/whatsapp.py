@@ -2,11 +2,11 @@ import hmac
 import hashlib
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 import httpx
 from apps.api.app.integrations.base import BaseIntegrationProvider
 from apps.api.app.core.config import settings
-from apps.api.app.core.encryption import decrypt_token
+from apps.api.app.core.encryption import decrypt_token, encrypt_token
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,8 @@ class WhatsAppProvider(BaseIntegrationProvider):
     ):
         self.access_token = access_token
         self.phone_number_id = phone_number_id
+        self.business_id = business_id
+        self.waba_id: Optional[str] = None
 
         # If business_id is provided, check if the business has custom Meta Cloud API credentials saved
         if db and business_id and not self.access_token:
@@ -40,6 +42,7 @@ class WhatsAppProvider(BaseIntegrationProvider):
                     custom_pid = meta_info.get("phone_number_id")
                     if custom_pid and custom_pid != "waba_prod_001":
                         self.phone_number_id = custom_pid
+                    self.waba_id = meta_info.get("waba_id")
                 except Exception:
                     pass
 
@@ -48,11 +51,121 @@ class WhatsAppProvider(BaseIntegrationProvider):
         self.phone_number_id = self.phone_number_id or settings.META_PHONE_NUMBER_ID or "1265571813306233"
         self.app_secret = app_secret or settings.META_APP_SECRET
         self.verify_token = verify_token or settings.META_VERIFY_TOKEN
-        self.api_version = "v20.0"
+        self.api_version = "v21.0"
         self.base_url = f"https://graph.facebook.com/{self.api_version}"
 
     def is_meta_api_configured(self) -> bool:
-        return bool(self.access_token and self.phone_number_id and len(self.access_token) > 20 and not self.access_token.startswith("meta_cloud_verified"))
+        return bool(
+            self.access_token
+            and self.phone_number_id
+            and len(self.access_token) > 20
+            and not self.access_token.startswith("meta_cloud_verified")
+        )
+
+    def get_embedded_signup_config(self) -> Dict[str, Any]:
+        """Returns public Meta App ID and Embedded Signup configuration for the frontend SDK."""
+        return {
+            "app_id": settings.META_APP_ID or "mock_leadflow_meta_app_id",
+            "config_id": settings.META_CONFIG_ID or "",
+            "api_version": self.api_version,
+            "webhook_url": f"{settings.API_URL.rstrip('/')}/api/v1/webhooks/whatsapp",
+            "is_platform_configured": bool(settings.META_APP_ID and settings.META_APP_SECRET),
+        }
+
+    async def exchange_embedded_signup_code(
+        self,
+        code: str,
+        waba_id: Optional[str] = None,
+        phone_number_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Exchanges short-lived code from Meta's Embedded Signup for a permanent access token,
+        queries phone number and WABA details, and subscribes the WABA to LeadFlow webhooks.
+        """
+        app_id = settings.META_APP_ID
+        app_secret = settings.META_APP_SECRET
+
+        if not app_id or not app_secret:
+            logger.info("Meta App ID or Secret not set in environment. Running sandbox/development token resolution.")
+            # For development sandbox fallback without crashing
+            display_num = "+91 9641986575"
+            return {
+                "success": True,
+                "access_token": settings.META_ACCESS_TOKEN or f"meta_token_sim_{code[:10]}",
+                "waba_id": waba_id or settings.META_WABA_ID or "28277710628584284",
+                "phone_number_id": phone_number_id or settings.META_PHONE_NUMBER_ID or "1265571813306233",
+                "display_phone_number": display_num,
+                "verified_name": "LeadFlow Verified Business",
+                "quality_rating": "GREEN",
+            }
+
+        # 1. Exchange OAuth code for permanent Access Token
+        oauth_url = f"{self.base_url}/oauth/access_token"
+        params = {
+            "client_id": app_id,
+            "client_secret": app_secret,
+            "code": code,
+        }
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            oauth_res = await client.get(oauth_url, params=params)
+            if oauth_res.status_code != 200:
+                logger.error(f"Meta OAuth code exchange error: {oauth_res.text}")
+                raise ValueError(f"Meta OAuth exchange failed: {oauth_res.json().get('error', {}).get('message', oauth_res.text)}")
+
+            token_data = oauth_res.json()
+            user_access_token = token_data.get("access_token")
+            if not user_access_token:
+                raise ValueError("Meta did not return an access_token in the exchange response.")
+
+            headers = {"Authorization": f"Bearer {user_access_token}"}
+
+            # 2. If phone_number_id wasn't passed, discover it via WABA phone numbers
+            target_phone_id = phone_number_id
+            target_waba_id = waba_id
+            display_phone = None
+            verified_name = None
+            quality_rating = "UNKNOWN"
+
+            if target_waba_id and not target_phone_id:
+                phone_list_url = f"{self.base_url}/{target_waba_id}/phone_numbers"
+                p_res = await client.get(phone_list_url, headers=headers)
+                if p_res.status_code == 200:
+                    p_data = p_res.json().get("data", [])
+                    if p_data:
+                        target_phone_id = p_data[0].get("id")
+                        display_phone = p_data[0].get("display_phone_number")
+                        verified_name = p_data[0].get("verified_name")
+                        quality_rating = p_data[0].get("quality_rating", "GREEN")
+
+            # 3. If phone_number_id is present, query its verified profile
+            if target_phone_id:
+                phone_detail_url = f"{self.base_url}/{target_phone_id}?fields=id,display_phone_number,verified_name,quality_rating,code_verification_status"
+                pd_res = await client.get(phone_detail_url, headers=headers)
+                if pd_res.status_code == 200:
+                    pd_data = pd_res.json()
+                    display_phone = pd_data.get("display_phone_number") or display_phone
+                    verified_name = pd_data.get("verified_name") or verified_name
+                    quality_rating = pd_data.get("quality_rating") or quality_rating
+
+            # 4. Subscribe LeadFlow App to WABA webhooks automatically
+            if target_waba_id:
+                sub_url = f"{self.base_url}/{target_waba_id}/subscribed_apps"
+                try:
+                    sub_res = await client.post(sub_url, headers=headers)
+                    logger.info(f"Subscribed LeadFlow app to WABA {target_waba_id}: status={sub_res.status_code} {sub_res.text}")
+                except Exception as e:
+                    logger.warning(f"Could not auto-subscribe app to WABA {target_waba_id}: {e}")
+
+            return {
+                "success": True,
+                "access_token": user_access_token,
+                "waba_id": target_waba_id or "waba_embedded",
+                "phone_number_id": target_phone_id or "phone_embedded",
+                "display_phone_number": display_phone or "Verified WhatsApp",
+                "verified_name": verified_name or "Business",
+                "quality_rating": quality_rating,
+            }
 
     def verify_webhook_challenge(self, mode: str, token: str, challenge: str) -> Optional[str]:
         """Validates Meta's webhook challenge handshake."""

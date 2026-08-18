@@ -36,6 +36,7 @@ import {
 import { fetchApi } from '../../lib/api';
 import { INDUSTRY_TEMPLATES, IndustryTemplate, ServiceItem } from '../../lib/industryTemplates';
 import PhoneInputWithCountry from '../../components/PhoneInputWithCountry';
+import MetaWhatsAppEmbeddedSignupButton from '../../components/MetaWhatsAppEmbeddedSignupButton';
 
 const INDUSTRIES = [
   { key: 'hvac', label: 'HVAC & Plumbing', icon: '❄️', desc: 'Repairs, tune-ups, installations' },
@@ -1013,30 +1014,31 @@ function OnboardingContent() {
           {step === 7 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <MessageSquare className="h-3.5 w-3.5" /> Step 7 of 10 • Customer-Facing WhatsApp Channel
+                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5" /> Step 7 of 10 • Connect Customer WhatsApp
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
-                  Which number should customers message?
+                  Connect your WhatsApp Business Number
                 </h1>
                 <p className="text-xs text-slate-400 mt-1">
-                  This is the public WhatsApp number your customers will message. Your AI employee will answer customer inquiries here in &lt; 2 seconds.
+                  Connect the WhatsApp number your customers message. Powered directly by Meta with zero manual API setup.
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#070a11] border border-white/[0.08] space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Customer-Facing WhatsApp Business Number</label>
-                  <PhoneInputWithCountry value={customerPhone} onChange={setCustomerPhone} defaultCountryCode="IN" />
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-slate-300 space-y-1">
-                  <div className="font-bold text-white">🔒 Security &amp; Role Separation:</div>
-                  <p className="text-slate-400 text-[11px]">
-                    Customer messages received on this number will be handled by your AI employee. Customers cannot execute owner commands or pause your AI.
-                  </p>
-                </div>
-              </div>
+              <MetaWhatsAppEmbeddedSignupButton
+                defaultPhone={customerPhone}
+                buttonLabel="Connect WhatsApp Business with Meta"
+                onSuccess={(details) => {
+                  setCustomerPhone(details.phone_number);
+                  setCustomerWaConnected(true);
+                  saveStepProgress(7, {
+                    customer_whatsapp: details.phone_number,
+                    phone_number_id: details.phone_number_id,
+                    waba_id: details.waba_id,
+                  });
+                  showToast(`✓ WhatsApp connected: ${details.phone_number}`);
+                }}
+              />
 
               <div className="pt-4 flex items-center justify-between">
                 <button type="button" onClick={() => setStep(6)} className="btn-pitch-secondary">

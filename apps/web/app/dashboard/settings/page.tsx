@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { fetchApi } from '../../../lib/api';
 import PhoneInputWithCountry from '../../../components/PhoneInputWithCountry';
+import MetaWhatsAppEmbeddedSignupButton from '../../../components/MetaWhatsAppEmbeddedSignupButton';
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -288,50 +289,28 @@ function SettingsContent() {
       {activeTab === 'channels' && (
         <div className="space-y-6 animate-fade-in">
           {/* WhatsApp Channel Card */}
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4">
+          <div className="pitch-card p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">WhatsApp Business Number</h3>
+                  <h3 className="text-sm font-bold text-white">WhatsApp Business Channel</h3>
                   <p className="text-xs text-slate-400">Incoming messages to this number are answered by your AI employee in &lt; 2s.</p>
                 </div>
               </div>
-
-              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold shrink-0">
-                Live &amp; Connected
-              </span>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Connected WhatsApp Number:
-              </label>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
-                  <PhoneInputWithCountry
-                    value={waPhone}
-                    onChange={setWaPhone}
-                    defaultCountryCode="IN"
-                  />
-                </div>
-                <button
-                  onClick={async () => {
-                    await fetchApi('/businesses/current', {
-                      method: 'PATCH',
-                      body: JSON.stringify({ phone: waPhone }),
-                    });
-                    setSavedSuccess(true);
-                    setTimeout(() => setSavedSuccess(false), 3000);
-                  }}
-                  className="btn-primary py-2.5 px-4 text-xs font-bold shrink-0"
-                >
-                  Update Number
-                </button>
-              </div>
-            </div>
+            <MetaWhatsAppEmbeddedSignupButton
+              defaultPhone={waPhone}
+              buttonLabel="Connect WhatsApp via Meta"
+              onSuccess={(details) => {
+                setWaPhone(details.phone_number);
+                setSavedSuccess(true);
+                setTimeout(() => setSavedSuccess(false), 3000);
+              }}
+            />
           </div>
 
           {/* Website Chat Widget Embed */}
