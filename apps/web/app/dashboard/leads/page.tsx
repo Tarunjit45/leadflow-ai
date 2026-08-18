@@ -56,7 +56,6 @@ export default function CustomersLeadsPage() {
         }
       }
     } catch (err) {
-      // Real empty list on error/offline
       setConversations([]);
       setSelectedConv(null);
     } finally {
@@ -140,7 +139,7 @@ export default function CustomersLeadsPage() {
         body: JSON.stringify({ message: userText, sender_type: 'human_operator' }),
       });
     } catch {
-      // Optimistic message already rendered
+      // Optimistic message rendered
     } finally {
       setSending(false);
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -150,7 +149,7 @@ export default function CustomersLeadsPage() {
   const createRealTestInquiry = async () => {
     try {
       const simulatedPhone = `+1 (512) 555-${Math.floor(1000 + Math.random() * 9000)}`;
-      const res = await fetchApi('/webhooks/whatsapp', {
+      await fetchApi('/webhooks/whatsapp', {
         method: 'POST',
         body: JSON.stringify({
           entry: [
@@ -189,25 +188,25 @@ export default function CustomersLeadsPage() {
   });
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden animate-fade-in">
+    <div className="h-[calc(100vh-4rem)] flex overflow-hidden animate-fade-in bg-white text-slate-900 border border-slate-200 rounded-3xl shadow-xl shadow-slate-200/50">
       {/* COLUMN 1: Conversation List */}
-      <div className="w-80 sm:w-96 flex-shrink-0 border-r border-slate-800/80 bg-[#080b11] flex flex-col justify-between">
-        <div className="p-4 border-b border-slate-800/80 space-y-3">
+      <div className="w-80 sm:w-96 flex-shrink-0 border-r border-slate-200 bg-slate-50/70 flex flex-col justify-between">
+        <div className="p-4 border-b border-slate-200 space-y-3 bg-white">
           <div className="flex items-center justify-between">
-            <h1 className="text-base font-bold text-white tracking-tight">Customer Inbox</h1>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              {filteredConversations.length} Real
+            <h1 className="text-base font-black text-slate-950 tracking-tight">Customer Inbox</h1>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+              {filteredConversations.length} Active
             </span>
           </div>
 
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by customer name or phone..."
-              className="input-field pl-9 text-xs"
+              placeholder="Search customer name or phone..."
+              className="input-field pl-9 text-xs !py-2"
             />
           </div>
         </div>
@@ -215,20 +214,22 @@ export default function CustomersLeadsPage() {
         {/* Conversation Items */}
         {filteredConversations.length === 0 ? (
           <div className="flex-1 p-6 text-center flex flex-col items-center justify-center space-y-3">
-            <MessageSquare className="w-8 h-8 text-slate-600" />
-            <div className="text-xs font-semibold text-slate-300">No customer conversations yet</div>
-            <p className="text-[11px] text-slate-500 max-w-[200px]">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
+              <MessageSquare className="w-6 h-6" />
+            </div>
+            <div className="text-xs font-bold text-slate-950">No customer conversations yet</div>
+            <p className="text-[11px] text-slate-500 max-w-[200px] font-medium">
               When real customers message your WhatsApp or Website Widget, they will appear here.
             </p>
             <button
               onClick={createRealTestInquiry}
-              className="btn-primary py-2 px-3 text-[11px] font-semibold mt-2"
+              className="btn-primary py-2 px-3 text-[11px] font-bold mt-2 shadow-xs"
             >
-              Simulate Real Inbound Lead
+              Simulate Inbound Lead
             </button>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/50">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 bg-white">
             {filteredConversations.map((c) => {
               const isSelected = selectedConv?.id === c.id;
               const isHuman = c.status === 'human_takeover';
@@ -239,33 +240,33 @@ export default function CustomersLeadsPage() {
                   onClick={() => selectConversation(c)}
                   className={`w-full p-4 text-left transition-colors duration-150 flex items-start gap-3.5 ${
                     isSelected
-                      ? 'bg-[#0e131f] border-l-2 border-blue-500'
-                      : 'hover:bg-slate-900/60'
+                      ? 'bg-blue-50/80 border-l-4 border-blue-600'
+                      : 'hover:bg-slate-50'
                   }`}
                 >
-                  <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center font-bold text-xs text-slate-300 shrink-0 mt-0.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                     {(c.customer_name || 'Customer').slice(0, 2).toUpperCase()}
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white truncate">
+                      <span className="text-xs font-bold text-slate-950 truncate">
                         {c.customer_name || c.customer_id}
                       </span>
-                      <span className="text-[10px] text-slate-500 shrink-0">
+                      <span className="text-[10px] text-slate-400 font-medium shrink-0">
                         {new Date(c.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-400 truncate">{c.last_message_preview || 'No messages'}</p>
+                    <p className="text-xs text-slate-600 font-medium truncate">{c.last_message_preview || 'No messages'}</p>
 
                     <div className="flex items-center gap-1.5 pt-0.5">
                       {isHuman ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 text-[10px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold">
                           <User className="w-2.5 h-2.5" /> You Replying
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 text-[10px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 text-[10px] font-bold">
                           <Bot className="w-2.5 h-2.5" /> AI Handling
                         </span>
                       )}
@@ -279,33 +280,33 @@ export default function CustomersLeadsPage() {
       </div>
 
       {/* COLUMN 2: Message Thread & Takeover Bar */}
-      <div className="flex-1 flex flex-col justify-between bg-[#0b0e17] overflow-hidden">
+      <div className="flex-1 flex flex-col justify-between bg-slate-50/50 overflow-hidden">
         {selectedConv ? (
           <>
             {/* Thread Header */}
-            <div className="h-16 flex-shrink-0 border-b border-slate-800/80 px-6 flex items-center justify-between bg-[#080b11]/80 backdrop-blur-sm">
+            <div className="h-16 flex-shrink-0 border-b border-slate-200 px-6 flex items-center justify-between bg-white backdrop-blur-sm shadow-xs">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-xs">
                   {(selectedConv.customer_name || 'CU').slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold text-white flex items-center gap-2">
+                  <h2 className="text-xs font-bold text-slate-950 flex items-center gap-2">
                     <span>{selectedConv.customer_name || 'Inbound Customer'}</span>
-                    <span className="text-[10px] text-slate-400 font-mono font-normal">
+                    <span className="text-[10px] text-slate-500 font-mono font-medium">
                       {selectedConv.customer_id}
                     </span>
                   </h2>
-                  <div className="text-[10px] text-slate-500">Channel: {selectedConv.channel || 'WhatsApp'}</div>
+                  <div className="text-[10px] text-slate-500 font-medium">Channel: {selectedConv.channel || 'WhatsApp'}</div>
                 </div>
               </div>
 
               {/* 1-Click Human Takeover Button */}
               <button
                 onClick={handleTakeoverToggle}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 shadow-sm ${
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 shadow-sm ${
                   selectedConv.status === 'human_takeover'
-                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                    : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                    : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300'
                 }`}
               >
                 {selectedConv.status === 'human_takeover' ? (
@@ -323,9 +324,9 @@ export default function CustomersLeadsPage() {
             </div>
 
             {/* Message Stream */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/70">
               {messages.length === 0 ? (
-                <div className="text-center text-slate-500 text-xs py-10">
+                <div className="text-center text-slate-500 text-xs py-10 font-medium">
                   No message history recorded yet for this lead.
                 </div>
               ) : (
@@ -338,19 +339,19 @@ export default function CustomersLeadsPage() {
                       key={m.id || idx}
                       className={`flex flex-col ${isCustomer ? 'items-start' : 'items-end'}`}
                     >
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1 px-1">
-                        <span>{isCustomer ? selectedConv.customer_name || 'Customer' : isHuman ? 'You (Human)' : 'LeadFlow AI'}</span>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1 px-1 font-semibold">
+                        <span>{isCustomer ? selectedConv.customer_name || 'Customer' : isHuman ? 'You (Human Operator)' : 'LeadFlow AI'}</span>
                         <span>•</span>
                         <span>{m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}</span>
                       </div>
 
                       <div
-                        className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                        className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed font-medium ${
                           isCustomer
-                            ? 'bg-[#0e131f] border border-slate-800 text-slate-200'
+                            ? 'bg-white border border-slate-200 text-slate-900 shadow-sm rounded-tl-sm'
                             : isHuman
-                            ? 'bg-amber-600 text-white font-medium'
-                            : 'bg-blue-600 text-white font-medium'
+                            ? 'bg-amber-500 text-slate-950 font-bold shadow-sm rounded-tr-sm'
+                            : 'bg-blue-600 text-white font-medium shadow-md shadow-blue-500/20 rounded-tr-sm'
                         }`}
                       >
                         {m.content}
@@ -363,18 +364,18 @@ export default function CustomersLeadsPage() {
             </div>
 
             {/* Input Composer */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-800/80 bg-[#080b11] flex gap-2">
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-200 bg-white flex gap-2">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Type a manual reply as human operator..."
-                className="input-field"
+                className="input-field !py-2.5"
               />
               <button
                 type="submit"
                 disabled={sending || !inputText.trim()}
-                className="btn-primary py-2.5 px-4 text-xs font-bold shrink-0"
+                className="btn-primary py-2.5 px-5 text-xs font-bold shrink-0 shadow-md shadow-blue-500/20"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Send</span>
@@ -383,49 +384,49 @@ export default function CustomersLeadsPage() {
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3 text-slate-500 text-xs">
-            <MessageSquare className="w-10 h-10 text-slate-700 mx-auto" />
-            <p>Select a customer conversation or simulate a real lead to inspect live messages.</p>
+            <MessageSquare className="w-10 h-10 text-slate-400 mx-auto" />
+            <p className="font-medium">Select a customer conversation or simulate a real lead to inspect live messages.</p>
           </div>
         )}
       </div>
 
       {/* COLUMN 3: Lead Dossier Panel */}
       {leadDetail && selectedConv && (
-        <div className="w-80 flex-shrink-0 border-l border-slate-800/80 bg-[#080b11] p-6 space-y-6 hidden xl:block overflow-y-auto">
+        <div className="w-80 flex-shrink-0 border-l border-slate-200 bg-white p-6 space-y-6 hidden xl:block overflow-y-auto">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Customer Lead Dossier</h3>
-            <div className="mt-2 text-base font-extrabold text-white">{leadDetail.name}</div>
-            <div className="text-xs text-slate-400 font-mono">{leadDetail.phone}</div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Customer Lead Dossier</h3>
+            <div className="mt-2 text-base font-black text-slate-950">{leadDetail.name}</div>
+            <div className="text-xs text-slate-500 font-mono font-medium">{leadDetail.phone}</div>
           </div>
 
-          <div className="space-y-3 pt-2 border-t border-slate-800/80 text-xs">
-            <div>
+          <div className="space-y-3 pt-2 border-t border-slate-100 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
               <div className="text-slate-500 text-[10px] uppercase font-bold">Service Required</div>
-              <div className="text-white font-semibold mt-0.5">{leadDetail.service_needed}</div>
+              <div className="text-slate-950 font-bold mt-0.5">{leadDetail.service_needed}</div>
             </div>
 
-            <div>
-              <div className="text-slate-500 text-[10px] uppercase font-bold">Estimated Job Value</div>
-              <div className="text-emerald-400 font-bold text-sm mt-0.5">
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+              <div className="text-emerald-800 text-[10px] uppercase font-bold">Estimated Job Value</div>
+              <div className="text-emerald-700 font-black text-base mt-0.5">
                 ${leadDetail.estimated_value?.toLocaleString()}
               </div>
             </div>
 
-            <div>
-              <div className="text-slate-500 text-[10px] uppercase font-bold">Lead Score</div>
-              <div className="text-blue-400 font-bold text-sm mt-0.5">{leadDetail.lead_score}/100</div>
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+              <div className="text-blue-800 text-[10px] uppercase font-bold">Lead Score</div>
+              <div className="text-blue-700 font-black text-base mt-0.5">{leadDetail.lead_score}/100</div>
             </div>
 
-            <div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
               <div className="text-slate-500 text-[10px] uppercase font-bold">Service Address</div>
-              <div className="text-slate-300 mt-0.5">{leadDetail.address}</div>
+              <div className="text-slate-700 font-medium mt-0.5">{leadDetail.address}</div>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-800/80">
+          <div className="pt-4 border-t border-slate-100">
             <button
               onClick={() => setShowBookingModal(true)}
-              className="btn-primary w-full py-2.5 text-xs font-bold"
+              className="btn-primary w-full py-3 text-xs font-bold shadow-md shadow-blue-500/20"
             >
               <CalendarPlus className="w-3.5 h-3.5" />
               <span>Book Confirmed Appointment</span>
@@ -436,21 +437,21 @@ export default function CustomersLeadsPage() {
 
       {/* Booking Confirmation Modal */}
       {showBookingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-[#0e131f] p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Book Confirmed Appointment</h3>
-              <button onClick={() => setShowBookingModal(false)} className="text-slate-400 hover:text-white">&times;</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-950">Book Confirmed Appointment</h3>
+              <button onClick={() => setShowBookingModal(false)} className="text-slate-400 hover:text-slate-700 font-bold text-lg">&times;</button>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Customer</label>
-                <div className="p-2.5 rounded-xl bg-slate-950 text-white font-semibold">{leadDetail?.name}</div>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Customer</label>
+                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-950 font-bold border border-slate-200">{leadDetail?.name}</div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Select Available Time Slot</label>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Select Available Time Slot</label>
                 <select
                   value={bookingSlot}
                   onChange={(e) => setBookingSlot(e.target.value)}
@@ -464,8 +465,8 @@ export default function CustomersLeadsPage() {
               </div>
 
               {bookingSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold text-xs flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
+                <div className="p-3 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-800 font-bold text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <span>Appointment Booked &amp; Synced with Database!</span>
                 </div>
               )}
@@ -474,7 +475,7 @@ export default function CustomersLeadsPage() {
             <div className="pt-2 flex justify-end gap-2">
               <button
                 onClick={() => setShowBookingModal(false)}
-                className="btn-secondary py-2 px-4 text-xs"
+                className="btn-secondary py-2 px-4 text-xs font-bold"
               >
                 Cancel
               </button>
@@ -504,7 +505,7 @@ export default function CustomersLeadsPage() {
                     }, 1500);
                   }
                 }}
-                className="btn-primary py-2 px-4 text-xs font-bold"
+                className="btn-primary py-2 px-4 text-xs font-bold shadow-md shadow-blue-500/20"
               >
                 Confirm Dispatch
               </button>

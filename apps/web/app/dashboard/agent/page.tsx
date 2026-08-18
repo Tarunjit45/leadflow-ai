@@ -153,27 +153,27 @@ export default function AgentStudioPage() {
   };
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 space-y-8 max-w-5xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto animate-fade-in font-sans text-slate-900">
       {/* Top Title & Save Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">AI Employee Studio</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">AI Employee Studio</h1>
+          <p className="text-xs text-slate-500 mt-1 font-medium">
             Customize your AI employee&apos;s speaking style, services, prices, and test live in real-time.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {saveSuccess && (
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-xl shadow-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               <span>Saved &amp; Updated!</span>
             </div>
           )}
           <button
             onClick={handleSave}
             disabled={saving}
-            className="btn-primary py-2.5 px-5 text-xs"
+            className="btn-primary py-2.5 px-5 text-xs font-bold shadow-md shadow-blue-500/20"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? 'Saving...' : 'Save Changes'}</span>
@@ -182,7 +182,7 @@ export default function AgentStudioPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-800 gap-2 overflow-x-auto pb-px">
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-px">
         {[
           { id: 'personality', label: '1. Speaking Style & Persona' },
           { id: 'services', label: '2. Services & Pricing' },
@@ -192,10 +192,10 @@ export default function AgentStudioPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+            className={`px-4 py-3 text-xs border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? 'border-blue-500 text-white font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-blue-600 text-blue-600 font-black'
+                : 'border-transparent text-slate-500 font-bold hover:text-slate-900'
             }`}
           >
             {tab.label}
@@ -206,12 +206,12 @@ export default function AgentStudioPage() {
       {/* TAB 1: Personality */}
       {activeTab === 'personality' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-6">
-            <h2 className="text-base font-bold text-white tracking-tight">AI Identity &amp; Persona</h2>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-6 shadow-xl shadow-slate-200/50">
+            <h2 className="text-base font-black text-slate-950 tracking-tight">AI Identity &amp; Persona</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                   AI Employee Name
                 </label>
                 <input
@@ -224,7 +224,7 @@ export default function AgentStudioPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                   Job Role / Title
                 </label>
                 <input
@@ -238,7 +238,7 @@ export default function AgentStudioPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                 Speaking Tone
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -254,19 +254,19 @@ export default function AgentStudioPage() {
                     onClick={() => setTone(t.id as any)}
                     className={`p-3.5 rounded-2xl border text-left transition-all duration-150 ${
                       tone === t.id
-                        ? 'border-blue-500/60 bg-blue-500/10 text-white shadow-sm'
-                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                        ? 'border-blue-600 bg-blue-50/80 text-blue-900 shadow-sm ring-2 ring-blue-600/20'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <div className="text-xs font-bold text-white">{t.label}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{t.desc}</div>
+                    <div className="text-xs font-black text-slate-950">{t.label}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 font-medium">{t.desc}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                 Special Rules or Instructions for Your AI
               </label>
               <textarea
@@ -286,12 +286,12 @@ export default function AgentStudioPage() {
         <div className="space-y-4 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-white">Services &amp; Pricing Menu</h2>
-              <p className="text-xs text-slate-400">Your AI references these exact prices when speaking with customers.</p>
+              <h2 className="text-base font-black text-slate-950">Services &amp; Pricing Menu</h2>
+              <p className="text-xs text-slate-500 font-medium">Your AI references these exact prices when speaking with customers.</p>
             </div>
             <button
               onClick={addService}
-              className="btn-secondary py-2 px-3 text-xs"
+              className="btn-secondary py-2 px-3 text-xs font-bold"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Service</span>
@@ -302,11 +302,11 @@ export default function AgentStudioPage() {
             {services.map((svc, idx) => (
               <div
                 key={idx}
-                className="rounded-2xl border border-slate-800/80 bg-[#0e131f] p-4 sm:p-5 space-y-3"
+                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-md shadow-slate-200/40"
               >
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                   <div className="sm:col-span-5">
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Service Name</label>
+                    <label className="block text-[10px] uppercase font-bold text-slate-700 mb-1">Service Name</label>
                     <input
                       type="text"
                       value={svc.name}
@@ -320,7 +320,7 @@ export default function AgentStudioPage() {
                   </div>
 
                   <div className="sm:col-span-4">
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Price / Fee</label>
+                    <label className="block text-[10px] uppercase font-bold text-slate-700 mb-1">Price / Fee</label>
                     <input
                       type="text"
                       value={svc.price}
@@ -334,7 +334,7 @@ export default function AgentStudioPage() {
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Duration (Min)</label>
+                    <label className="block text-[10px] uppercase font-bold text-slate-700 mb-1">Duration (Min)</label>
                     <input
                       type="number"
                       value={svc.duration || 60}
@@ -350,7 +350,7 @@ export default function AgentStudioPage() {
                   <div className="sm:col-span-1 flex items-end justify-end pb-1">
                     <button
                       onClick={() => removeService(idx)}
-                      className="text-slate-500 hover:text-rose-400 p-2 transition-colors"
+                      className="text-slate-400 hover:text-rose-600 p-2 transition-colors"
                       title="Delete service"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -359,7 +359,7 @@ export default function AgentStudioPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">What&apos;s Included (Description)</label>
+                  <label className="block text-[10px] uppercase font-bold text-slate-700 mb-1">What&apos;s Included (Description)</label>
                   <input
                     type="text"
                     value={svc.description}
@@ -380,17 +380,17 @@ export default function AgentStudioPage() {
       {/* TAB 3: Business Hours */}
       {activeTab === 'hours' && (
         <div className="space-y-4 animate-fade-in">
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-4">
-            <h2 className="text-base font-bold text-white">Operating Schedule</h2>
-            <p className="text-xs text-slate-400">Your AI only schedules appointments during these available operating hours.</p>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-xl shadow-slate-200/50">
+            <h2 className="text-base font-black text-slate-950">Operating Schedule</h2>
+            <p className="text-xs text-slate-500 font-medium">Your AI only schedules appointments during these available operating hours.</p>
 
             <div className="space-y-2.5 pt-2">
               {Object.entries(hours).map(([day, val]) => (
                 <div
                   key={day}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-xs"
+                  className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs"
                 >
-                  <span className="font-bold text-white capitalize w-28">{day}</span>
+                  <span className="font-black text-slate-950 capitalize w-28">{day}</span>
 
                   <div className="flex items-center gap-3">
                     {!val.closed ? (
@@ -401,20 +401,20 @@ export default function AgentStudioPage() {
                           onChange={(e) => {
                             setHours({ ...hours, [day]: { ...val, open: e.target.value } });
                           }}
-                          className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-900 font-bold shadow-xs"
                         />
-                        <span className="text-slate-500">to</span>
+                        <span className="text-slate-500 font-bold">to</span>
                         <input
                           type="time"
                           value={val.close}
                           onChange={(e) => {
                             setHours({ ...hours, [day]: { ...val, close: e.target.value } });
                           }}
-                          className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-900 font-bold shadow-xs"
                         />
                       </>
                     ) : (
-                      <span className="text-slate-500 italic px-4">Closed</span>
+                      <span className="text-slate-400 italic px-4 font-semibold">Closed</span>
                     )}
 
                     <button
@@ -422,8 +422,8 @@ export default function AgentStudioPage() {
                       onClick={() => {
                         setHours({ ...hours, [day]: { ...val, closed: !val.closed } });
                       }}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${
-                        val.closed ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition shadow-xs ${
+                        val.closed ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                       }`}
                     >
                       {val.closed ? 'Open' : 'Close'}
@@ -438,15 +438,15 @@ export default function AgentStudioPage() {
 
       {/* TAB 4: Live Test Chat Sandbox */}
       {activeTab === 'sandbox' && (
-        <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-xl shadow-slate-200/50 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-sm">
                 <Bot className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">{name} — Live Test Sandbox</h3>
-                <p className="text-[10px] text-slate-400">Ask questions as if you were a customer to test replies and pricing.</p>
+                <h3 className="text-sm font-black text-slate-950">{name} — Live Test Sandbox</h3>
+                <p className="text-[10px] text-slate-500 font-medium">Ask questions as if you were a customer to test replies and pricing.</p>
               </div>
             </div>
 
@@ -456,24 +456,24 @@ export default function AgentStudioPage() {
                   { sender: 'ai', text: `Hello! I am ${name}. How can I assist you today?` },
                 ]);
               }}
-              className="text-xs text-slate-400 hover:text-white transition-colors"
+              className="text-xs text-slate-500 hover:text-slate-950 transition-colors font-bold underline"
             >
               Reset Chat
             </button>
           </div>
 
           {/* Chat Stream */}
-          <div className="h-72 overflow-y-auto space-y-3 p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80">
+          <div className="h-72 overflow-y-auto space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
             {testMessages.map((msg, i) => (
               <div
                 key={i}
                 className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed font-medium ${
                     msg.sender === 'user'
-                      ? 'bg-blue-600 text-white font-medium'
-                      : 'bg-slate-900 text-slate-200 border border-slate-800'
+                      ? 'bg-blue-600 text-white shadow-sm rounded-tr-sm'
+                      : 'bg-white text-slate-950 border border-slate-200 shadow-xs rounded-tl-sm'
                   }`}
                 >
                   {msg.text}
@@ -483,10 +483,10 @@ export default function AgentStudioPage() {
 
             {testLoading && (
               <div className="flex justify-start">
-                <div className="rounded-2xl px-4 py-3 bg-slate-900 border border-slate-800 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-400 typing-dot" />
-                  <span className="w-2 h-2 rounded-full bg-blue-400 typing-dot" />
-                  <span className="w-2 h-2 rounded-full bg-blue-400 typing-dot" />
+                <div className="rounded-2xl px-4 py-3 bg-white border border-slate-200 flex items-center gap-1.5 shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 typing-dot" />
+                  <span className="w-2 h-2 rounded-full bg-blue-600 typing-dot" />
+                  <span className="w-2 h-2 rounded-full bg-blue-600 typing-dot" />
                 </div>
               </div>
             )}
@@ -504,7 +504,7 @@ export default function AgentStudioPage() {
             <button
               type="submit"
               disabled={testLoading || !testInput.trim()}
-              className="btn-primary shrink-0 py-2.5 px-4 text-xs font-bold"
+              className="btn-primary shrink-0 py-2.5 px-5 text-xs font-bold shadow-md shadow-blue-500/20"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Send</span>

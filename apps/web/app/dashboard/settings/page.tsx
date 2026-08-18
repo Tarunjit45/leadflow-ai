@@ -165,26 +165,26 @@ function SettingsContent() {
   };
 
   return (
-    <div className="p-6 sm:p-8 lg:p-10 space-y-8 max-w-5xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto animate-fade-in font-sans text-slate-900">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Settings &amp; Channels</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">Settings &amp; Channels</h1>
+          <p className="text-xs text-slate-500 mt-1 font-medium">
             Manage your real company profile, international WhatsApp business number, and integrations.
           </p>
         </div>
 
         {savedSuccess && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-xl shadow-xs">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>Settings Saved!</span>
           </div>
         )}
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-800 gap-2 overflow-x-auto pb-px">
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-px">
         {[
           { id: 'profile', label: 'Company Profile', icon: Building },
           { id: 'channels', label: 'Connected Channels', icon: MessageSquare },
@@ -199,13 +199,13 @@ function SettingsContent() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-3 text-xs border-b-2 transition-colors whitespace-nowrap ${
                 isActive
-                  ? 'border-blue-500 text-white font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-blue-600 text-blue-600 font-black'
+                  : 'border-transparent text-slate-500 font-bold hover:text-slate-900'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
               <span>{tab.label}</span>
             </button>
           );
@@ -215,12 +215,12 @@ function SettingsContent() {
       {/* TAB 1: Profile */}
       {activeTab === 'profile' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-5">
-            <h2 className="text-base font-bold text-white">Real Business Information</h2>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-5 shadow-xl shadow-slate-200/50">
+            <h2 className="text-base font-black text-slate-950">Real Business Information</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                   Business Name *
                 </label>
                 <input
@@ -234,7 +234,7 @@ function SettingsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                   WhatsApp / Contact Phone (Select Country) *
                 </label>
                 <PhoneInputWithCountry
@@ -246,7 +246,7 @@ function SettingsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                   Service Area City / Region
                 </label>
                 <input
@@ -259,7 +259,7 @@ function SettingsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                   Average Job Value (in your currency)
                 </label>
                 <input
@@ -275,7 +275,7 @@ function SettingsContent() {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={handleSaveProfile}
-                className="btn-primary py-2.5 px-6 text-xs"
+                className="btn-primary py-2.5 px-6 text-xs font-bold shadow-md shadow-blue-500/20"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save Profile Changes</span>
@@ -289,15 +289,15 @@ function SettingsContent() {
       {activeTab === 'channels' && (
         <div className="space-y-6 animate-fade-in">
           {/* WhatsApp Channel Card */}
-          <div className="pitch-card p-6 space-y-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xl shadow-slate-200/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center font-bold">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">WhatsApp Business Channel</h3>
-                  <p className="text-xs text-slate-400">Incoming messages to this number are answered by your AI employee in &lt; 2s.</p>
+                  <h3 className="text-sm font-black text-slate-950">WhatsApp Business Channel</h3>
+                  <p className="text-xs text-slate-500 font-medium">Incoming messages to this number are answered by your AI employee in &lt; 2s.</p>
                 </div>
               </div>
             </div>
@@ -314,28 +314,28 @@ function SettingsContent() {
           </div>
 
           {/* Website Chat Widget Embed */}
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 space-y-4">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-xl shadow-slate-200/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 border border-blue-200 flex items-center justify-center font-bold">
                   <Code className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Website Live Chat Widget</h3>
-                  <p className="text-xs text-slate-400">Copy this 1-line script onto your website to enable AI chat.</p>
+                  <h3 className="text-sm font-black text-slate-950">Website Live Chat Widget</h3>
+                  <p className="text-xs text-slate-500 font-medium">Copy this 1-line script onto your website to enable AI chat.</p>
                 </div>
               </div>
 
               <button
                 onClick={copyEmbedSnippet}
-                className="btn-secondary py-2 px-3 text-xs"
+                className="btn-secondary py-2 px-3 text-xs font-bold"
               >
-                {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedSnippet ? 'Copied!' : 'Copy Script'}</span>
               </button>
             </div>
 
-            <pre className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 text-xs text-blue-300 font-mono overflow-x-auto">
+            <pre className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-cyan-300 font-mono overflow-x-auto">
               {embedCode}
             </pre>
           </div>
@@ -345,37 +345,37 @@ function SettingsContent() {
       {/* TAB 3: Smart Follow-ups */}
       {activeTab === 'followups' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-6">
-            <h2 className="text-base font-bold text-white">Automated Lead Recovery Cadence</h2>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-6 shadow-xl shadow-slate-200/50">
+            <h2 className="text-base font-black text-slate-950">Automated Lead Recovery Cadence</h2>
 
-            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3 text-xs">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-white">Stop Follow-ups Once Booked</div>
-                  <div className="text-slate-400 text-[11px]">Automatically halts sequences when customer confirms appointment.</div>
+                  <div className="font-bold text-slate-950">Stop Follow-ups Once Booked</div>
+                  <div className="text-slate-500 text-[11px] font-medium">Automatically halts sequences when customer confirms appointment.</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={stopOnBooking}
                   onChange={(e) => setStopOnBooking(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500/30"
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
               </div>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="font-bold text-white">3-Stage Follow-Up Sequence:</div>
-              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                <span className="text-blue-400 font-bold">Stage 1 (+24 Hours):</span>
-                <p className="text-slate-300">&ldquo;Hi! Checking in to see if you still needed assistance with your service request.&rdquo;</p>
+              <div className="font-bold text-slate-950">3-Stage Follow-Up Sequence:</div>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="text-blue-700 font-bold">Stage 1 (+24 Hours):</span>
+                <p className="text-slate-700 font-medium">&ldquo;Hi! Checking in to see if you still needed assistance with your service request.&rdquo;</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                <span className="text-blue-400 font-bold">Stage 2 (+72 Hours):</span>
-                <p className="text-slate-300">&ldquo;Hi! We have an open dispatch slot available this week if you&apos;d like us to hold it for you.&rdquo;</p>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="text-blue-700 font-bold">Stage 2 (+72 Hours):</span>
+                <p className="text-slate-700 font-medium">&ldquo;Hi! We have an open dispatch slot available this week if you&apos;d like us to hold it for you.&rdquo;</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                <span className="text-blue-400 font-bold">Stage 3 (+7 Days):</span>
-                <p className="text-slate-300">&ldquo;Friendly reminder that our team is available whenever you&apos;re ready. Have a wonderful week!&rdquo;</p>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <span className="text-blue-700 font-bold">Stage 3 (+7 Days):</span>
+                <p className="text-slate-700 font-medium">&ldquo;Friendly reminder that our team is available whenever you&apos;re ready. Have a wonderful week!&rdquo;</p>
               </div>
             </div>
           </div>
@@ -385,38 +385,38 @@ function SettingsContent() {
       {/* TAB 4: Billing */}
       {activeTab === 'billing' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-6">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-6 shadow-xl shadow-slate-200/50">
             <div className="flex items-center justify-between">
               <div>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold uppercase">
+                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 text-xs font-black uppercase">
                   {sub.plan_tier || 'Growth'} Plan
                 </span>
-                <h2 className="text-2xl font-extrabold text-white mt-2">${sub.amount || 199} <span className="text-xs font-normal text-slate-400">/ month</span></h2>
+                <h2 className="text-3xl font-black text-slate-950 mt-2">${sub.amount || 199} <span className="text-xs font-medium text-slate-500">/ month</span></h2>
               </div>
 
-              <button className="btn-primary py-2 px-5 text-xs">
+              <button className="btn-primary py-2.5 px-5 text-xs font-bold shadow-md shadow-blue-500/20">
                 Manage Subscription
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800/80">
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Monthly AI Messages</span>
-                  <span className="text-white font-bold">{sub.messages_count || 0} / {sub.messages_limit || 2500}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-slate-600">Monthly AI Messages</span>
+                  <span className="text-slate-950 font-black">{sub.messages_count || 0} / {sub.messages_limit || 2500}</span>
                 </div>
-                <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-blue-500 h-full rounded-full" style={{ width: '5%' }} />
+                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="bg-blue-600 h-full rounded-full" style={{ width: '5%' }} />
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Monthly Bookings</span>
-                  <span className="text-white font-bold">{sub.appointments_count || 0} / {sub.appointments_limit || 250}</span>
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-slate-600">Monthly Bookings</span>
+                  <span className="text-slate-950 font-black">{sub.appointments_count || 0} / {sub.appointments_limit || 250}</span>
                 </div>
-                <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: '2%' }} />
+                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="bg-emerald-600 h-full rounded-full" style={{ width: '2%' }} />
                 </div>
               </div>
             </div>
@@ -428,19 +428,19 @@ function SettingsContent() {
       {activeTab === 'security' && (
         <div className="space-y-6 animate-fade-in">
           {/* Password Change */}
-          <div className="rounded-3xl border border-slate-800/80 bg-[#0e131f] p-6 sm:p-8 space-y-4">
-            <h2 className="text-base font-bold text-white">Change Workspace Password</h2>
-            <p className="text-xs text-slate-400">Updating your password will immediately revoke all other active sessions across devices.</p>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-xl shadow-slate-200/50">
+            <h2 className="text-base font-black text-slate-950">Change Workspace Password</h2>
+            <p className="text-xs text-slate-500 font-medium">Updating your password will immediately revoke all other active sessions across devices.</p>
 
             {pwdStatus && (
-              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold">
+              <div className="p-3 rounded-xl bg-blue-100 border border-blue-200 text-blue-900 text-xs font-bold">
                 {pwdStatus}
               </div>
             )}
 
             <form onSubmit={handleUpdatePassword} className="space-y-3 max-w-md">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Current Password</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Current Password</label>
                 <input
                   type="password"
                   required
@@ -451,7 +451,7 @@ function SettingsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">New Password (8+ characters)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">New Password (8+ characters)</label>
                 <input
                   type="password"
                   required
@@ -462,7 +462,7 @@ function SettingsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Confirm New Password</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Confirm New Password</label>
                 <input
                   type="password"
                   required
@@ -472,24 +472,24 @@ function SettingsContent() {
                 />
               </div>
 
-              <button type="submit" className="btn-primary py-2.5 px-5 text-xs font-bold">
+              <button type="submit" className="btn-primary py-2.5 px-5 text-xs font-bold shadow-md shadow-blue-500/20">
                 Update Password
               </button>
             </form>
           </div>
 
           {/* Danger Zone */}
-          <div className="rounded-3xl border border-rose-500/25 bg-rose-500/5 p-6 sm:p-8 space-y-4">
-            <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
-              <Trash2 className="w-4 h-4" />
+          <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 sm:p-8 space-y-4 shadow-md shadow-rose-500/10">
+            <div className="flex items-center gap-2 text-rose-900 font-black text-sm">
+              <Trash2 className="w-4 h-4 text-rose-600" />
               <span>Danger Zone — Delete Workspace</span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
+            <p className="text-xs text-rose-800 leading-relaxed max-w-xl font-medium">
               Permanently deletes your business profile, customer conversation history, and AI employee configuration. This action cannot be undone.
             </p>
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="px-4 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition-all duration-150"
+              className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all duration-150 shadow-sm"
             >
               Delete My Workspace &amp; Account
             </button>
@@ -499,39 +499,39 @@ function SettingsContent() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-3xl border border-rose-500/30 bg-[#0e131f] p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-2 text-rose-400 font-bold text-base">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-rose-600 font-black text-base">
               <AlertTriangle className="w-5 h-5" />
               <span>Permanently Delete Account?</span>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-700 leading-relaxed font-medium">
               This will permanently delete your workspace for <strong>{bizName}</strong>, all customer dossiers, and all integration tokens.
             </p>
 
             <div className="space-y-1.5 text-xs pt-2">
-              <label className="block text-slate-400 text-[11px]">Type <strong>DELETE</strong> to confirm:</label>
+              <label className="block text-slate-700 text-[11px] font-bold">Type <strong>DELETE</strong> to confirm:</label>
               <input
                 type="text"
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 placeholder="DELETE"
-                className="input-field border-rose-500/30 text-rose-300"
+                className="input-field border-rose-300 text-rose-900"
               />
             </div>
 
             <div className="pt-3 flex justify-end gap-2">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="btn-secondary py-2 px-4 text-xs"
+                className="btn-secondary py-2 px-4 text-xs font-bold"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleteConfirmText !== 'DELETE' || deleting}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors disabled:opacity-40"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors disabled:opacity-40 shadow-sm"
               >
                 {deleting ? 'Deleting...' : 'Permanently Delete'}
               </button>
@@ -545,7 +545,7 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-xs text-slate-500">Loading settings...</div>}>
+    <Suspense fallback={<div className="p-8 text-xs text-slate-500 font-medium">Loading settings...</div>}>
       <SettingsContent />
     </Suspense>
   );

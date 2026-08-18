@@ -85,11 +85,11 @@ export default function SystemStatusPage() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto font-sans text-slate-900">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">System & Credentials Diagnostics</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">System &amp; Diagnostics</h1>
+          <p className="text-xs text-slate-500 mt-1 font-medium">
             Transparent breakdown of connected third-party providers, database status, and setup instructions.
           </p>
         </div>
@@ -97,10 +97,10 @@ export default function SystemStatusPage() {
         <button
           onClick={loadStatus}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-800 hover:bg-slate-50 transition shadow-xs disabled:opacity-50"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Diagnostics
+          <span>Refresh Diagnostics</span>
         </button>
       </div>
 
@@ -110,26 +110,26 @@ export default function SystemStatusPage() {
           return (
             <div
               key={idx}
-              className={`rounded-2xl border p-5 space-y-3 transition ${
+              className={`rounded-3xl border p-6 space-y-3 transition shadow-md shadow-slate-200/40 bg-white ${
                 isHealthy
-                  ? 'border-slate-800 bg-slate-900/80'
-                  : 'border-amber-500/30 bg-amber-950/10'
+                  ? 'border-slate-200'
+                  : 'border-amber-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-xl font-bold ${
-                      isHealthy ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                    className={`flex h-10 w-10 items-center justify-center rounded-2xl font-bold ${
+                      isHealthy ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-300'
                     }`}
                   >
                     {isHealthy ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold text-white">{service.name}</h2>
+                    <h2 className="text-sm font-black text-slate-950">{service.name}</h2>
                     <span
-                      className={`text-[11px] font-semibold capitalize ${
-                        isHealthy ? 'text-emerald-400' : 'text-amber-400'
+                      className={`text-[11px] font-bold capitalize ${
+                        isHealthy ? 'text-emerald-700' : 'text-amber-800'
                       }`}
                     >
                       {service.status.replace('_', ' ')}
@@ -142,7 +142,7 @@ export default function SystemStatusPage() {
                     href={service.setup_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 underline"
                   >
                     <span>Get Keys</span>
                     <ExternalLink className="h-3 w-3" />
@@ -150,14 +150,14 @@ export default function SystemStatusPage() {
                 )}
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed">{service.details}</p>
+              <p className="text-xs text-slate-700 font-medium leading-relaxed">{service.details}</p>
 
               {!isHealthy && service.required_variables?.length > 0 && (
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-1 text-xs">
-                  <span className="font-semibold text-slate-400 text-[11px]">Required Environment Variables (.env):</span>
-                  <div className="flex flex-wrap gap-2 pt-1 font-mono text-[11px] text-amber-300">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-1 text-xs">
+                  <span className="font-bold text-amber-900 text-[11px]">Required Environment Variables (.env):</span>
+                  <div className="flex flex-wrap gap-2 pt-1 font-mono text-[11px] text-amber-950 font-bold">
                     {service.required_variables.map((v: string) => (
-                      <span key={v} className="rounded bg-slate-900 px-2 py-0.5 border border-slate-800">
+                      <span key={v} className="rounded-lg bg-white px-2 py-0.5 border border-amber-300 shadow-2xs">
                         {v}
                       </span>
                     ))}
