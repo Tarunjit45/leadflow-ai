@@ -459,47 +459,47 @@ function OnboardingContent() {
 
   if (isHydrating) {
     return (
-      <div className="min-h-screen bg-[#05070c] bg-ambient-pitch text-slate-100 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
-        <div className="h-14 w-14 rounded-3xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center animate-spin text-blue-400 shadow-xl shadow-blue-600/20">
+      <div className="min-h-screen bg-slate-50 bg-ambient-pitch text-slate-900 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
+        <div className="h-14 w-14 rounded-3xl bg-blue-100 border border-blue-200 flex items-center justify-center animate-spin text-blue-600 shadow-md shadow-blue-500/10">
           <RefreshCw className="h-7 w-7" />
         </div>
-        <div className="text-base font-black text-white tracking-tight">Restoring your setup...</div>
-        <div className="text-xs text-slate-400">Loading saved business configuration from database</div>
+        <div className="text-base font-black text-slate-950 tracking-tight">Restoring your setup...</div>
+        <div className="text-xs text-slate-500 font-medium">Loading saved business configuration from database</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#05070c] bg-ambient-pitch text-slate-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 bg-ambient-pitch text-slate-900 flex flex-col justify-between p-4 sm:p-6 lg:p-8 font-sans selection:bg-blue-600 selection:text-white">
       {/* Toast Notifications */}
       {successToast && (
-        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-emerald-500/40 bg-emerald-950/95 px-5 py-3 text-xs font-bold text-emerald-300 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-3 text-xs font-bold text-emerald-800 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <span>{successToast}</span>
         </div>
       )}
 
       {errorToast && (
-        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-red-500/40 bg-red-950/95 px-5 py-3 text-xs font-bold text-red-300 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
-          <AlertCircle className="h-4 w-4 text-red-400" />
+        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-rose-300 bg-rose-50 px-5 py-3 text-xs font-bold text-rose-800 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
+          <AlertCircle className="h-4 w-4 text-rose-600" />
           <span>{errorToast}</span>
         </div>
       )}
 
       {/* Top Header */}
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-3 border-b border-white/[0.06]">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-3 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-600/30">
             <Bot className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="text-base font-black text-white tracking-tight flex items-center gap-2">
+            <div className="text-base font-black text-slate-950 tracking-tight flex items-center gap-2">
               <span>LeadFlow AI</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200 text-blue-700">
                 Setup Wizard
               </span>
             </div>
-            <div className="text-xs text-slate-400">Step {step} of 10 &bull; 24/7 Autonomous Sales &amp; Dispatch Employee</div>
+            <div className="text-xs text-slate-500 font-medium">Step {step} of 10 &bull; 24/7 Autonomous Sales &amp; Dispatch Employee</div>
           </div>
         </div>
 
@@ -522,10 +522,10 @@ function OnboardingContent() {
                   isCurrent
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-105'
                     : isCompleted
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-pointer'
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-pointer'
                     : isAllowed
-                    ? 'bg-white/[0.05] text-slate-300 border border-white/[0.08] cursor-pointer'
-                    : 'text-slate-600 opacity-50 cursor-not-allowed'
+                    ? 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 cursor-pointer shadow-xs'
+                    : 'text-slate-400 bg-slate-100 opacity-50 cursor-not-allowed border border-slate-200'
                 }`}
               >
                 <span>{isCompleted ? '✓' : st.num}</span>
@@ -539,27 +539,27 @@ function OnboardingContent() {
       {/* Main Grid Content */}
       <div className="max-w-7xl mx-auto w-full my-6 grid lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: 10-Step Visual Flow */}
-        <div className="lg:col-span-7 pitch-card p-6 sm:p-8 animate-fade-in relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-500" />
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 animate-fade-in relative overflow-hidden shadow-xl shadow-slate-200/70">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500" />
 
           {/* ================= STEP 1: OWNER INFORMATION ================= */}
           {step === 1 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
                   <User className="h-3.5 w-3.5" /> Step 1 of 10 • Owner Information
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   Tell us about yourself
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   We use your personal owner details to send you AI notifications and allow you to manage your AI employee directly from WhatsApp.
                 </p>
               </div>
 
               <div className="space-y-4 pt-2">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Your Full Name *</label>
+                  <label className="block text-xs font-bold text-slate-700">Your Full Name *</label>
                   <input
                     type="text"
                     value={ownerName}
@@ -573,8 +573,8 @@ function OnboardingContent() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Your Owner WhatsApp Number *</label>
-                  <p className="text-[11px] text-slate-400">You will receive system alerts and can text commands like &quot;Pause AI&quot; or &quot;Show today&apos;s appointments&quot; here.</p>
+                  <label className="block text-xs font-bold text-slate-700">Your Owner WhatsApp Number *</label>
+                  <p className="text-[11px] text-slate-500">You will receive system alerts and can text commands like &quot;Pause AI&quot; or &quot;Show today&apos;s appointments&quot; here.</p>
                   <PhoneInputWithCountry
                     value={ownerPhone}
                     onChange={(val) => {
@@ -587,16 +587,16 @@ function OnboardingContent() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-slate-300">Your Email Address</label>
+                    <label className="block text-xs font-bold text-slate-700">Your Email Address</label>
                     <input
                       type="email"
                       value={ownerEmail}
                       disabled
-                      className="input-pitch opacity-75 cursor-not-allowed"
+                      className="input-pitch opacity-75 cursor-not-allowed bg-slate-50"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-slate-300">Business Timezone</label>
+                    <label className="block text-xs font-bold text-slate-700">Business Timezone</label>
                     <input
                       type="text"
                       value={timezone}
@@ -629,13 +629,13 @@ function OnboardingContent() {
           {step === 2 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Store className="h-3.5 w-3.5" /> Step 2 of 10 • Business Identity
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   What industry is your business?
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Selecting your category automatically customizes your AI employee with pre-tuned services, FAQs, and pricing models.
                 </p>
               </div>
@@ -651,16 +651,16 @@ function OnboardingContent() {
                       onClick={() => handleSelectIndustry(ind.key)}
                       className={`p-3.5 rounded-2xl text-left transition-all duration-200 border flex flex-col justify-between ${
                         isSel
-                          ? 'bg-blue-600/15 border-blue-500 shadow-pitch-glow-blue scale-[1.02]'
-                          : 'bg-[#070a11] border-white/[0.06] hover:border-white/[0.18] hover:bg-[#0c101b]'
+                          ? 'bg-blue-50 border-2 border-blue-600 shadow-md scale-[1.02]'
+                          : 'bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100/70'
                       }`}
                     >
                       <div className="text-2xl mb-2">{ind.icon}</div>
                       <div>
-                        <div className={`text-xs font-bold ${isSel ? 'text-white' : 'text-slate-200'}`}>
+                        <div className={`text-xs font-bold ${isSel ? 'text-blue-950' : 'text-slate-900'}`}>
                           {ind.label}
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{ind.desc}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{ind.desc}</div>
                       </div>
                     </button>
                   );
@@ -669,7 +669,7 @@ function OnboardingContent() {
 
               <div className="space-y-4 pt-2">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Company / Trade Business Name *</label>
+                  <label className="block text-xs font-bold text-slate-700">Company / Trade Business Name *</label>
                   <input
                     type="text"
                     value={bizName}
@@ -684,7 +684,7 @@ function OnboardingContent() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-slate-300">Service City / Metro Area</label>
+                    <label className="block text-xs font-bold text-slate-700">Service City / Metro Area</label>
                     <input
                       type="text"
                       value={city}
@@ -697,7 +697,7 @@ function OnboardingContent() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-slate-300">Brief Description</label>
+                    <label className="block text-xs font-bold text-slate-700">Brief Description</label>
                     <input
                       type="text"
                       value={bizDescription}
@@ -733,13 +733,13 @@ function OnboardingContent() {
           {step === 3 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Layers className="h-3.5 w-3.5" /> Step 3 of 10 • Services &amp; Pricing
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   What services do you offer?
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Your AI employee quotes these exact prices and durations to customers over WhatsApp and web chat.
                 </p>
               </div>
@@ -748,25 +748,25 @@ function OnboardingContent() {
                 {services.map((srv, idx) => (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-2xl bg-[#070a11] border border-white/[0.08] flex items-center justify-between gap-3 hover:border-white/[0.16] transition"
+                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:border-slate-300 transition"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
+                      <div className="h-8 w-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
                         {idx + 1}
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-white">{srv.name}</div>
-                        <div className="text-[10px] text-slate-400">{srv.description || 'Estimated 60 min job'}</div>
+                        <div className="text-xs font-bold text-slate-950">{srv.name}</div>
+                        <div className="text-[10px] text-slate-500">{srv.description || 'Estimated 60 min job'}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="text-xs font-bold text-emerald-400 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                      <div className="text-xs font-bold text-emerald-800 px-2.5 py-1 rounded-xl bg-emerald-100 border border-emerald-300">
                         {srv.price}
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveService(idx)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -776,9 +776,9 @@ function OnboardingContent() {
               </div>
 
               {/* Add Custom Service */}
-              <div className="p-4 rounded-2xl bg-[#070a11] border border-dashed border-white/[0.12] space-y-3">
-                <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                  <Plus className="h-3.5 w-3.5 text-blue-400" /> Add Custom Service
+              <div className="p-4 rounded-2xl bg-slate-50/70 border border-dashed border-slate-300 space-y-3">
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Plus className="h-3.5 w-3.5 text-blue-600" /> Add Custom Service
                 </div>
                 <div className="grid sm:grid-cols-12 gap-2">
                   <input
@@ -826,13 +826,13 @@ function OnboardingContent() {
           {step === 4 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" /> Step 4 of 10 • Business Hours
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   When is your business open?
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Your AI employee uses these hours to offer genuine appointment slots and tell customers when you are open.
                 </p>
               </div>
@@ -843,9 +843,9 @@ function OnboardingContent() {
                   return (
                     <div
                       key={day.key}
-                      className="p-3 rounded-2xl bg-[#070a11] border border-white/[0.08] flex items-center justify-between gap-3"
+                      className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
                     >
-                      <div className="w-24 text-xs font-bold text-white">{day.label}</div>
+                      <div className="w-24 text-xs font-bold text-slate-950">{day.label}</div>
                       <div className="flex items-center gap-2">
                         {!current.closed ? (
                           <>
@@ -860,7 +860,7 @@ function OnboardingContent() {
                                 setHours(updated);
                                 autosaveDraft(4, { hours: updated });
                               }}
-                              className="px-2 py-1 rounded-xl bg-black/40 border border-white/[0.1] text-xs text-white"
+                              className="px-2 py-1 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 font-medium"
                             />
                             <span className="text-xs text-slate-500">to</span>
                             <input
@@ -874,11 +874,11 @@ function OnboardingContent() {
                                 setHours(updated);
                                 autosaveDraft(4, { hours: updated });
                               }}
-                              className="px-2 py-1 rounded-xl bg-black/40 border border-white/[0.1] text-xs text-white"
+                              className="px-2 py-1 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 font-medium"
                             />
                           </>
                         ) : (
-                          <span className="text-xs text-slate-500 font-bold px-4 py-1 rounded-xl bg-white/[0.03]">
+                          <span className="text-xs text-slate-500 font-bold px-4 py-1 rounded-xl bg-slate-100">
                             Closed
                           </span>
                         )}
@@ -894,8 +894,8 @@ function OnboardingContent() {
                           }}
                           className={`text-[10px] font-bold px-2.5 py-1 rounded-xl border transition ${
                             current.closed
-                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                              : 'bg-white/[0.05] border-white/[0.08] text-slate-400'
+                              ? 'bg-amber-100 border-amber-300 text-amber-900'
+                              : 'bg-white border-slate-300 text-slate-700'
                           }`}
                         >
                           {current.closed ? 'Open' : 'Close'}
@@ -927,13 +927,13 @@ function OnboardingContent() {
           {step === 5 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Bot className="h-3.5 w-3.5" /> Step 5 of 10 • AI Employee Persona
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   Customize your AI Employee
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Choose an avatar, tone, and responsibilities. No prompt writing required.
                 </p>
               </div>
@@ -953,15 +953,15 @@ function OnboardingContent() {
                       }}
                       className={`p-3.5 rounded-2xl text-center border transition-all ${
                         isSel
-                          ? 'bg-blue-600/15 border-blue-500 shadow-pitch-glow-blue scale-[1.02]'
-                          : 'bg-[#070a11] border-white/[0.06] hover:border-white/[0.15]'
+                          ? 'bg-blue-50 border-2 border-blue-600 shadow-md scale-[1.02]'
+                          : 'bg-slate-50 border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <div className={`h-10 w-10 rounded-2xl mx-auto mb-2 flex items-center justify-center text-lg bg-gradient-to-tr ${av.color} shadow-lg`}>
+                      <div className={`h-10 w-10 rounded-2xl mx-auto mb-2 flex items-center justify-center text-lg bg-gradient-to-tr ${av.color} shadow-lg text-white`}>
                         {av.icon}
                       </div>
-                      <div className="text-xs font-bold text-white">{av.name}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{av.role}</div>
+                      <div className="text-xs font-bold text-slate-950">{av.name}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{av.role}</div>
                     </button>
                   );
                 })}
@@ -969,7 +969,7 @@ function OnboardingContent() {
 
               <div className="grid sm:grid-cols-2 gap-4 pt-1">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">AI Employee Name *</label>
+                  <label className="block text-xs font-bold text-slate-700">AI Employee Name *</label>
                   <input
                     type="text"
                     value={agentName}
@@ -981,7 +981,7 @@ function OnboardingContent() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Conversational Tone</label>
+                  <label className="block text-xs font-bold text-slate-700">Conversational Tone</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {[
                       { key: 'friendly', label: 'Friendly' },
@@ -998,8 +998,8 @@ function OnboardingContent() {
                         }}
                         className={`py-2.5 rounded-xl text-xs font-bold border transition ${
                           tone === t.key
-                            ? 'bg-blue-600 text-white border-blue-500'
-                            : 'bg-[#070a11] text-slate-300 border-white/[0.08]'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-300'
                         }`}
                       >
                         {t.label}
@@ -1011,7 +1011,7 @@ function OnboardingContent() {
 
               {/* Responsibilities Checkboxes */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-300">What should your AI help customers with?</label>
+                <label className="block text-xs font-bold text-slate-700">What should your AI help customers with?</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
                     { key: 'answer_questions', label: 'Answer Questions' },
@@ -1027,13 +1027,13 @@ function OnboardingContent() {
                         key={item.key}
                         type="button"
                         onClick={() => toggleResponsibility(item.key)}
-                        className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition ${
+                        className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition ${
                           checked
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                            : 'bg-[#070a11] border-white/[0.06] text-slate-400'
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                            : 'bg-white border-slate-200 text-slate-600'
                         }`}
                       >
-                        <CheckSquare className={`h-3.5 w-3.5 ${checked ? 'text-emerald-400' : 'text-slate-600'}`} />
+                        <CheckSquare className={`h-3.5 w-3.5 ${checked ? 'text-emerald-600' : 'text-slate-400'}`} />
                         <span>{item.label}</span>
                       </button>
                     );
@@ -1062,20 +1062,20 @@ function OnboardingContent() {
           {step === 6 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Smartphone className="h-3.5 w-3.5" /> Step 6 of 10 • Owner WhatsApp Control Center
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   Connect your Owner WhatsApp Number
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   This is your personal WhatsApp number. You will receive system alerts and manage your AI by texting commands directly from this chat.
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#070a11] border border-white/[0.08] space-y-4">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Your Owner WhatsApp Number *</label>
+                  <label className="block text-xs font-bold text-slate-700">Your Owner WhatsApp Number *</label>
                   <PhoneInputWithCountry
                     value={ownerPhone}
                     onChange={(val) => {
@@ -1087,12 +1087,12 @@ function OnboardingContent() {
                 </div>
 
                 <div className="space-y-2 text-xs pt-1">
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     <span>Receive instant alerts for hot qualified leads &amp; booked appointments</span>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     <span>Text commands like <em>&quot;Show today&apos;s appointments&quot;</em> or <em>&quot;Pause AI&quot;</em></span>
                   </div>
                 </div>
@@ -1100,7 +1100,7 @@ function OnboardingContent() {
                 <div className="pt-2">
                   {ownerWaConnected && (
                     <div className="space-y-3">
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
+                      <div className="p-3 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2">
                         <CheckCircle2 className="h-4 w-4" />
                         <span>Registered Owner Number: {ownerPhone}</span>
                       </div>
@@ -1108,13 +1108,13 @@ function OnboardingContent() {
                         type="button"
                         onClick={handleTestOwnerPing}
                         disabled={ownerWaLoading}
-                        className="w-full py-3 rounded-2xl bg-white/[0.06] border border-white/[0.12] text-xs font-bold text-white hover:bg-white/[0.1] transition flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-2xl bg-white border border-slate-300 text-xs font-bold text-slate-800 hover:bg-slate-50 transition flex items-center justify-center gap-2 shadow-xs"
                       >
-                        <Zap className="h-4 w-4 text-amber-400" />
+                        <Zap className="h-4 w-4 text-amber-500" />
                         <span>{ownerWaLoading ? 'Sending...' : '📲 Send Live Test Ping to Owner WhatsApp'}</span>
                       </button>
                       {ownerPingStatus && (
-                        <div className="text-[11px] text-center text-slate-400 font-mono">{ownerPingStatus}</div>
+                        <div className="text-[11px] text-center text-slate-600 font-mono">{ownerPingStatus}</div>
                       )}
                     </div>
                   )}
@@ -1142,13 +1142,13 @@ function OnboardingContent() {
           {step === 7 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Smartphone className="h-3.5 w-3.5" /> Step 7 of 10 • Connect Customer WhatsApp
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   Connect your WhatsApp Business Number
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Connect the WhatsApp number your customers message. Powered directly by Meta with zero manual API setup.
                 </p>
               </div>
@@ -1188,33 +1188,33 @@ function OnboardingContent() {
           {step === 8 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5" /> Step 8 of 10 • Google Calendar Sync
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   Connect your Google Calendar
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Syncing your calendar ensures your AI employee never double-books your schedule and checks real availability.
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#070a11] border border-white/[0.08] space-y-4 text-center">
-                <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
                   <CalendarCheck className="h-6 w-6" />
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-bold text-white">Automatic 2-Way Calendar Booking</h3>
-                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  <h3 className="text-sm font-bold text-slate-950">Automatic 2-Way Calendar Booking</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto font-medium">
                     When a customer books an appointment via WhatsApp or Web, the event is automatically added to your calendar.
                   </p>
                 </div>
 
                 <div className="pt-2">
                   {gcalConnected ? (
-                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
-                      <CheckCircle2 className="h-4 w-4" />
+                    <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                       <span>✓ Google Calendar Connected</span>
                     </div>
                   ) : (
@@ -1251,42 +1251,42 @@ function OnboardingContent() {
           {step === 9 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Step 9 of 10 • Configuration Review
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   Review your AI Employee Setup
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Everything is configured. Review your details before final activation.
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#070a11] border border-white/[0.08] space-y-4">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Business Name</div>
-                    <div className="text-xs font-bold text-white mt-1 truncate">{bizName || 'My Business'}</div>
+                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Business Name</div>
+                    <div className="text-xs font-bold text-slate-950 mt-1 truncate">{bizName || 'My Business'}</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">AI Assistant</div>
-                    <div className="text-xs font-bold text-white mt-1 truncate">{agentName}</div>
+                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">AI Assistant</div>
+                    <div className="text-xs font-bold text-slate-950 mt-1 truncate">{agentName}</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Services Catalog</div>
-                    <div className="text-xs font-bold text-emerald-400 mt-1">{services.length} Configured</div>
+                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Services Catalog</div>
+                    <div className="text-xs font-bold text-emerald-700 mt-1">{services.length} Configured</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Owner Phone</div>
-                    <div className="text-xs font-bold text-white mt-1 truncate">{ownerPhone}</div>
+                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Owner Phone</div>
+                    <div className="text-xs font-bold text-slate-950 mt-1 truncate">{ownerPhone}</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Customer Channel</div>
-                    <div className="text-xs font-bold text-white mt-1 truncate">{customerPhone}</div>
+                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Customer Channel</div>
+                    <div className="text-xs font-bold text-slate-950 mt-1 truncate">{customerPhone}</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Calendar</div>
-                    <div className="text-xs font-bold text-emerald-400 mt-1">{gcalConnected ? 'Connected' : 'Active'}</div>
+                  <div className="p-3 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Calendar</div>
+                    <div className="text-xs font-bold text-emerald-700 mt-1">{gcalConnected ? 'Connected' : 'Active'}</div>
                   </div>
                 </div>
               </div>
@@ -1311,25 +1311,25 @@ function OnboardingContent() {
           {step === 10 && (
             <div className="space-y-6 animate-fade-slide-up">
               <div>
-                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5" /> Step 10 of 10 • Final Launch &amp; Activation
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
                   Launch your 24/7 AI Employee
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1 font-medium">
                   Clicking activate below will start your live AI employee, dispatch an automated welcome message to your Owner WhatsApp number, and activate your real dashboard.
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-gradient-to-tr from-blue-950/40 via-[#070a11] to-emerald-950/30 border border-white/[0.1] space-y-4">
+              <div className="p-6 rounded-2xl bg-gradient-to-tr from-blue-50 via-slate-50 to-emerald-50 border border-blue-200 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                  <div className="h-10 w-10 rounded-2xl bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center justify-center font-bold">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-white">Ready for 100% Real-World Operation</div>
-                    <div className="text-xs text-slate-400">All 10 setup milestones verified and valid.</div>
+                    <div className="text-sm font-bold text-slate-950">Ready for 100% Real-World Operation</div>
+                    <div className="text-xs text-slate-600 font-medium">All 10 setup milestones verified and valid.</div>
                   </div>
                 </div>
 
@@ -1337,7 +1337,7 @@ function OnboardingContent() {
                   type="button"
                   onClick={handleActivateLaunch}
                   disabled={loading}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 text-sm font-black text-white shadow-2xl shadow-blue-600/40 hover:opacity-95 transition-all duration-200 hover:scale-[1.01] flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 text-sm font-black text-white shadow-xl shadow-blue-600/30 hover:opacity-95 transition-all duration-200 hover:scale-[1.01] flex items-center justify-center gap-2"
                 >
                   <Sparkles className="h-5 w-5" />
                   <span>{loading ? 'Activating Live AI Employee...' : '🚀 Activate My 24/7 AI Employee Now'}</span>
@@ -1354,31 +1354,31 @@ function OnboardingContent() {
         </div>
 
         {/* Right Column: Live Mobile AI Simulator */}
-        <div className="lg:col-span-5 pitch-card p-6 flex flex-col justify-between h-full min-h-[580px]">
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 flex flex-col justify-between h-full min-h-[580px] shadow-xl shadow-slate-200/70">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-white">Live Simulator Preview</span>
+                <span className="text-xs font-bold text-slate-950">Live Simulator Preview</span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.08]">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                 Instant &lt; 2s Reply
               </span>
             </div>
 
             {/* Mobile Chat Interface Container */}
-            <div className="rounded-2xl bg-[#04060a] border border-white/[0.08] overflow-hidden flex flex-col h-[420px]">
+            <div className="rounded-2xl bg-slate-100/70 border border-slate-200 overflow-hidden flex flex-col h-[420px]">
               {/* Simulator Chat Header */}
-              <div className="p-3.5 bg-[#090d16] border-b border-white/[0.08] flex items-center gap-3">
+              <div className="p-3.5 bg-white border-b border-slate-200 flex items-center gap-3">
                 <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-bold text-white text-xs shadow-md">
                   {agentName.slice(0, 1) || 'A'}
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <div className="text-xs font-bold text-slate-950 flex items-center gap-1.5">
                     <span>{agentName || 'LeadFlow AI'}</span>
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="text-[10px] text-slate-400">{bizName || 'Your Business'}</div>
+                  <div className="text-[10px] text-slate-500 font-medium">{bizName || 'Your Business'}</div>
                 </div>
               </div>
 
@@ -1392,8 +1392,8 @@ function OnboardingContent() {
                     <div
                       className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
                         msg.role === 'customer'
-                          ? 'bg-blue-600 text-white rounded-br-none shadow-md shadow-blue-600/20'
-                          : 'bg-[#111726] text-slate-200 border border-white/[0.08] rounded-bl-none'
+                          ? 'bg-blue-600 text-white rounded-br-none shadow-md shadow-blue-600/20 font-medium'
+                          : 'bg-white text-slate-900 border border-slate-200 rounded-bl-none shadow-xs font-medium'
                       }`}
                     >
                       {msg.text}
@@ -1403,7 +1403,7 @@ function OnboardingContent() {
               </div>
 
               {/* Quick Prompt Chips */}
-              <div className="p-2 bg-[#080c14] border-t border-white/[0.06] flex gap-1.5 overflow-x-auto">
+              <div className="p-2 bg-white/80 border-t border-slate-200 flex gap-1.5 overflow-x-auto">
                 {['What are your prices?', 'Book tomorrow at 2 PM', 'What are your hours?'].map((p, idx) => (
                   <button
                     key={idx}
@@ -1411,7 +1411,7 @@ function OnboardingContent() {
                     onClick={() => {
                       setSimInput(p);
                     }}
-                    className="whitespace-nowrap px-2.5 py-1 rounded-lg text-[10px] font-medium bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.06] transition"
+                    className="whitespace-nowrap px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition shadow-xs"
                   >
                     {p}
                   </button>
@@ -1419,19 +1419,19 @@ function OnboardingContent() {
               </div>
 
               {/* Simulator Input Box */}
-              <div className="p-2.5 bg-[#090d16] border-t border-white/[0.08] flex items-center gap-2">
+              <div className="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2">
                 <input
                   type="text"
                   value={simInput}
                   onChange={(e) => setSimInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSimulatorSend()}
                   placeholder="Test customer message..."
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#04060a] border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
                 <button
                   type="button"
                   onClick={handleSimulatorSend}
-                  className="h-8 w-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition"
+                  className="h-8 w-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition shadow-sm"
                 >
                   <Send className="h-3.5 w-3.5" />
                 </button>
@@ -1440,8 +1440,8 @@ function OnboardingContent() {
           </div>
 
           <div className="mt-4 text-center">
-            <div className="text-[11px] text-slate-400">
-              ⚡ Powered by <strong className="text-white">LeadFlow AI Engine</strong> &bull; Auto-Syncs with Calendar &amp; WhatsApp
+            <div className="text-[11px] text-slate-500 font-medium">
+              ⚡ Powered by <strong className="text-slate-900 font-bold">LeadFlow AI Engine</strong> &bull; Auto-Syncs with Calendar &amp; WhatsApp
             </div>
           </div>
         </div>
@@ -1454,7 +1454,7 @@ export default function OnboardingPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#05070c] flex items-center justify-center text-white">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-700 font-medium">
           Loading Setup Wizard...
         </div>
       }

@@ -50,12 +50,12 @@ export default function PhoneInputWithCountry({
   };
 
   return (
-    <div className={`flex rounded-xl bg-slate-950/70 border border-slate-800 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all ${className}`}>
+    <div className={`flex rounded-xl bg-white border border-slate-300 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100 shadow-sm transition-all ${className}`}>
       {/* Country Flag & Dial Code Select */}
-      <div className="relative flex items-center border-r border-slate-800 bg-slate-900/60 rounded-l-xl px-2.5 py-2">
+      <div className="relative flex items-center border-r border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-l-xl px-3 py-2.5 transition-colors">
         <span className="text-base mr-1.5">{selectedCountry.flag}</span>
-        <span className="text-xs font-semibold text-slate-300 mr-1">{selectedCountry.dialCode}</span>
-        <ChevronDown className="w-3 h-3 text-slate-500 pointer-events-none" />
+        <span className="text-xs font-bold text-slate-800 mr-1">{selectedCountry.dialCode}</span>
+        <ChevronDown className="w-3.5 h-3.5 text-slate-500 pointer-events-none" />
         <select
           value={selectedCountry.code}
           onChange={handleCountryChange}
@@ -63,7 +63,7 @@ export default function PhoneInputWithCountry({
           aria-label="Select Country Code"
         >
           {COUNTRIES.map((c) => (
-            <option key={c.code} value={c.code} className="bg-slate-900 text-white">
+            <option key={c.code} value={c.code} className="bg-white text-slate-900 font-medium py-1">
               {c.flag} {c.name} ({c.dialCode})
             </option>
           ))}
@@ -77,7 +77,7 @@ export default function PhoneInputWithCountry({
         value={phoneNumber}
         onChange={handlePhoneChange}
         placeholder={placeholder}
-        className="flex-1 px-3.5 py-2.5 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+        className="flex-1 px-3.5 py-2.5 bg-white text-sm text-slate-900 font-medium placeholder-slate-400 focus:outline-none rounded-r-xl"
       />
     </div>
   );

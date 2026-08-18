@@ -23,18 +23,18 @@ export default function DashboardLayout({
 
   if (!authorized) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#05070c] text-slate-300">
+      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-700 font-medium">
         Loading LeadFlow AI Workspace...
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#05070c] text-slate-100 font-sans">
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-[#05070c] bg-ambient-pitch">
+        <main className="flex-1 overflow-y-auto bg-slate-50 bg-ambient-pitch p-6">
           {children}
         </main>
       </div>

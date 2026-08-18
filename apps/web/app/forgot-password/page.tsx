@@ -36,51 +36,52 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col justify-between selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 bg-ambient-pitch text-slate-900 flex flex-col justify-between selection:bg-blue-600 selection:text-white font-sans">
       {/* Header */}
-      <header className="border-b border-slate-800/80 bg-slate-900/40 px-6 py-4">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-xl px-6 py-4 sticky top-0 z-30 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
-              <Bot className="w-6 h-6 text-white" />
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-600/30 transition-transform duration-200 group-hover:scale-105">
+              <Bot className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">LeadFlow<span className="text-sky-400">.ai</span></span>
+            <span className="text-xl font-black tracking-tight text-slate-950">LeadFlow<span className="text-blue-600 font-mono">.ai</span></span>
           </Link>
-          <Link href="/login" className="text-sm text-slate-400 hover:text-white transition-colors">
-            Return to Sign in
+          <Link href="/login" className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors">
+            Return to Sign in &rarr;
           </Link>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
-        <div className="max-w-md w-full bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 animate-fade-in my-8">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xl shadow-slate-200/70 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500" />
           
           {!submitted ? (
             <>
               <div className="mb-6">
-                <h1 className="text-2xl font-bold tracking-tight text-white">
+                <h1 className="text-2xl font-black tracking-tight text-slate-950">
                   Forgot your password?
                 </h1>
-                <p className="text-slate-400 text-sm mt-1">
+                <p className="text-slate-500 text-xs mt-1 font-medium">
                   Enter the email address associated with your account and we&apos;ll send you a secure reset link.
                 </p>
               </div>
 
               {errorMessage && (
-                <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-3">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3 font-medium">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                   <div>{errorMessage}</div>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                     Account Email Address
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
@@ -89,7 +90,7 @@ export default function ForgotPasswordPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@business.com"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/70 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                      className="input-field pl-10"
                     />
                   </div>
                 </div>
@@ -97,11 +98,11 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading || !isEmailValid}
-                  className="w-full mt-2 py-3.5 px-6 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-sky-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 group"
+                  className="btn-primary w-full py-3.5 text-sm font-bold mt-2 shadow-lg shadow-blue-500/25"
                 >
                   {loading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                       <span>Sending reset link...</span>
                     </>
                   ) : (
@@ -114,18 +115,18 @@ export default function ForgotPasswordPage() {
               </form>
 
               {/* Forgot Email Recovery Guidance */}
-              <div className="mt-6 pt-4 border-t border-slate-800 text-xs">
+              <div className="mt-6 pt-4 border-t border-slate-100 text-xs">
                 <button
                   type="button"
                   onClick={() => setShowForgotEmailHelp(!showForgotEmailHelp)}
-                  className="text-slate-400 hover:text-slate-300 transition-colors flex items-center gap-1.5 font-medium"
+                  className="text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5 font-bold"
                 >
-                  <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
+                  <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
                   <span>Can&apos;t remember your email?</span>
                 </button>
 
                 {showForgotEmailHelp && (
-                  <div className="mt-3 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/90 text-slate-400 space-y-2 leading-relaxed">
+                  <div className="mt-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 space-y-2 leading-relaxed font-medium">
                     <p>
                       Check your inbox or search for emails sent from <strong>support@leadflow.ai</strong> or your WhatsApp Business confirmations.
                     </p>
@@ -138,27 +139,27 @@ export default function ForgotPasswordPage() {
             </>
           ) : (
             <div className="py-6 space-y-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight text-white">
+                <h2 className="text-2xl font-black tracking-tight text-slate-950">
                   Check your inbox
                 </h2>
-                <p className="text-sm text-slate-300 leading-relaxed max-w-sm mx-auto">
-                  If an account exists for <strong>{email}</strong>, we&apos;ve sent a password reset link.
+                <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto font-medium">
+                  If an account exists for <strong className="text-slate-950">{email}</strong>, we&apos;ve sent a password reset link.
                 </p>
               </div>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] text-slate-500 font-medium">
                 Please check your spam or junk folder if you don&apos;t see the email within 2 minutes. The link will expire in 1 hour.
               </p>
 
               <div className="pt-2">
                 <Link
                   href="/login"
-                  className="w-full inline-block py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-colors"
+                  className="btn-secondary w-full py-3 px-4 text-xs font-bold inline-block text-center"
                 >
                   Return to Sign in
                 </Link>
@@ -166,16 +167,16 @@ export default function ForgotPasswordPage() {
             </div>
           )}
 
-          <div className="mt-6 pt-6 border-t border-slate-800/80 flex items-center justify-center gap-2 text-xs text-slate-500">
-            <ShieldCheck className="w-4 h-4 text-slate-400" />
+          <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>Cryptographically Random • Single-Use Tokens</span>
           </div>
 
         </div>
       </main>
 
-      <footer className="border-t border-slate-900 px-6 py-4 text-center text-xs text-slate-600">
-        © {new Date().getFullYear()} LeadFlow AI Inc.
+      <footer className="border-t border-slate-200 bg-white/60 px-6 py-4 text-center text-xs font-semibold text-slate-500">
+        © {new Date().getFullYear()} LeadFlow AI Inc. All rights reserved.
       </footer>
     </div>
   );
