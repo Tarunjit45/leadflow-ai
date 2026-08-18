@@ -52,7 +52,6 @@ export default function MetaWhatsAppEmbeddedSignupButton({
   const [manualToken, setManualToken] = useState('');
   const [manualPhoneId, setManualPhoneId] = useState('');
   const [manualWabaId, setManualWabaId] = useState('');
-  const [manualSaving, setManualSaving] = useState(false);
 
   // Test Ping State
   const [pingLoading, setPingLoading] = useState(false);
@@ -215,7 +214,7 @@ export default function MetaWhatsAppEmbeddedSignupButton({
     setErrorMessage(null);
     try {
       const cleanPhone = customPhone.trim();
-      const res = await fetchApi('/integrations/whatsapp/connect', {
+      await fetchApi('/integrations/whatsapp/connect', {
         method: 'POST',
         body: JSON.stringify({
           phone_number: cleanPhone,
@@ -286,8 +285,12 @@ export default function MetaWhatsAppEmbeddedSignupButton({
             <div>
               <div className="text-base font-black text-slate-950 flex items-center gap-2">
                 <span>WhatsApp Number Connected</span>
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 font-black uppercase">
-                  Active
+                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase ${
+                  connectedDetails.is_live
+                    ? 'bg-emerald-100 border border-emerald-300 text-emerald-800'
+                    : 'bg-amber-100 border border-amber-300 text-amber-800'
+                }`}>
+                  {connectedDetails.is_live ? 'Live Meta Cloud API' : 'Registered on LeadFlow'}
                 </span>
               </div>
               <div className="text-xs text-slate-600 font-mono font-bold mt-0.5">{connectedDetails.phone}</div>
@@ -310,7 +313,7 @@ export default function MetaWhatsAppEmbeddedSignupButton({
             <div>
               <div className="text-xs font-black text-slate-950 flex items-center gap-1.5">
                 <Send className="w-3.5 h-3.5 text-blue-600" />
-                <span>Verify Message Delivery (Test Ping)</span>
+                <span>Verify Live WhatsApp Packet Delivery</span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
                 Send an immediate test WhatsApp message from your AI employee to <strong>{connectedDetails.phone}</strong>.
@@ -324,43 +327,112 @@ export default function MetaWhatsAppEmbeddedSignupButton({
               className="btn-primary !py-2 !px-4 !text-xs shrink-0 shadow-md shadow-blue-500/20"
             >
               <Send className={`w-3.5 h-3.5 ${pingLoading ? 'animate-spin' : ''}`} />
-              <span>{pingLoading ? 'Sending Ping...' : 'Send Test Ping'}</span>
+              <span>{pingLoading ? 'Testing Live Delivery...' : 'Send Live Test Ping'}</span>
             </button>
           </div>
 
           {pingResult && (
             <div
               className={`p-3.5 rounded-xl border text-xs leading-relaxed ${
-                pingResult.success
+                pingResult.success && !pingResult.delivery_result?.simulated
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
                   : 'bg-amber-50 border-amber-300 text-amber-900'
               }`}
             >
               <div className="font-bold flex items-center gap-1.5">
-                {pingResult.success ? (
+                {pingResult.success && !pingResult.delivery_result?.simulated ? (
                   <>
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>✓ WhatsApp Message Dispatched!</span>
+                    <span>✓ Real WhatsApp Message Delivered to Meta Cloud!</span>
                   </>
                 ) : (
                   <>
                     <AlertCircle className="w-4 h-4 text-amber-600" />
-                    <span>WhatsApp Delivery Status</span>
+                    <span>Meta Cloud API Status</span>
                   </>
                 )}
               </div>
-              <div className="text-[11px] mt-1">
-                {pingResult.delivery_result?.simulated ? (
-                  <span>
-                    Number <strong>{connectedDetails.phone}</strong> is registered on LeadFlow AI. To send live WhatsApp packets to your phone, configure your Meta System User Access Token.
-                  </span>
+              <div className="text-[11px] mt-1 space-y-1">
+                {pingResult.delivery_result?.simulated || !pingResult.is_meta_live ? (
+                  <p>
+                    Your business number <strong>{connectedDetails.phone}</strong> is registered on LeadFlow AI. To send real WhatsApp messages over the internet to your phone, attach your <strong>Meta Cloud API System User Access Token</strong> below.
+                  </p>
                 ) : pingResult.delivery_result?.meta_error ? (
-                  <span>
-                    Meta Error: <strong>{pingResult.delivery_result.meta_error}</strong>
-                  </span>
+                  <p>
+                    Meta Graph API returned: <strong>{pingResult.delivery_result.meta_error}</strong>
+                    {pingResult.delivery_result?.details && <span> ({pingResult.delivery_result.details})</span>}
+                  </p>
+                ) : pingResult.success ? (
+                  <p>✓ Live WhatsApp packet accepted by Meta Graph API! Check your phone&apos;s WhatsApp app.</p>
                 ) : (
-                  <span>Message delivered successfully to your WhatsApp app. Check your phone!</span>
+                  <p>{pingResult.error || 'Failed to dispatch test message to Meta.'}</p>
                 )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Update / Attach Meta Token Accordion */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowManualSetup(!showManualSetup)}
+            className="flex items-center justify-between w-full text-xs font-bold text-slate-700 hover:text-blue-600 py-1"
+          >
+            <span className="flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-blue-600" />
+              <span>{connectedDetails.is_live ? 'Update Meta Cloud API Token' : 'Attach Meta Cloud API Access Token for Live Sending'}</span>
+            </span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showManualSetup ? 'rotate-180 text-blue-600' : ''}`} />
+          </button>
+
+          {showManualSetup && (
+            <div className="mt-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-fade-in text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Meta System User Permanent Access Token
+                </label>
+                <input
+                  type="password"
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                  placeholder="EAAG... (from Meta Business Manager > System Users)"
+                  className="input-field !text-xs !py-2"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Phone Number ID</label>
+                  <input
+                    type="text"
+                    value={manualPhoneId}
+                    onChange={(e) => setManualPhoneId(e.target.value)}
+                    placeholder="e.g. 1265571813306233"
+                    className="input-field !text-xs !py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">WhatsApp Business Account (WABA) ID</label>
+                  <input
+                    type="text"
+                    value={manualWabaId}
+                    onChange={(e) => setManualWabaId(e.target.value)}
+                    placeholder="e.g. 28277710628584284"
+                    className="input-field !text-xs !py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleDirectConnect}
+                  disabled={loading}
+                  className="btn-primary !py-2 !px-4 !text-xs font-bold"
+                >
+                  Save Meta Token
+                </button>
               </div>
             </div>
           )}

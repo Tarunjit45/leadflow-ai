@@ -43,12 +43,12 @@ class WhatsAppProvider(BaseIntegrationProvider):
                     if custom_pid and custom_pid != "waba_prod_001":
                         self.phone_number_id = custom_pid
                     self.waba_id = meta_info.get("waba_id")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Could not decrypt stored token: {e}")
 
         # Fallback to system-level settings if not overridden
         self.access_token = self.access_token or settings.META_ACCESS_TOKEN
-        self.phone_number_id = self.phone_number_id or settings.META_PHONE_NUMBER_ID or "1265571813306233"
+        self.phone_number_id = self.phone_number_id or settings.META_PHONE_NUMBER_ID
         self.app_secret = app_secret or settings.META_APP_SECRET
         self.verify_token = verify_token or settings.META_VERIFY_TOKEN
         self.api_version = "v21.0"
@@ -58,15 +58,16 @@ class WhatsAppProvider(BaseIntegrationProvider):
         return bool(
             self.access_token
             and self.phone_number_id
-            and len(self.access_token) > 20
+            and len(self.access_token.strip()) > 20
             and not self.access_token.startswith("meta_cloud_verified")
+            and not self.access_token.startswith("meta_token_sim_")
         )
 
     def get_embedded_signup_config(self) -> Dict[str, Any]:
         """Returns public Meta App ID and Embedded Signup configuration for the frontend SDK."""
         return {
-            "app_id": settings.META_APP_ID or "mock_leadflow_meta_app_id",
-            "config_id": settings.META_CONFIG_ID or "",
+            "app_id": settings.META_APP_ID or "1753893495945396",
+            "config_id": settings.META_CONFIG_ID or "1070129732436618",
             "api_version": self.api_version,
             "webhook_url": f"{settings.API_URL.rstrip('/')}/api/v1/webhooks/whatsapp",
             "is_platform_configured": bool(settings.META_APP_ID and settings.META_APP_SECRET),
@@ -82,22 +83,11 @@ class WhatsAppProvider(BaseIntegrationProvider):
         Exchanges short-lived code from Meta's Embedded Signup for a permanent access token,
         queries phone number and WABA details, and subscribes the WABA to LeadFlow webhooks.
         """
-        app_id = settings.META_APP_ID
-        app_secret = settings.META_APP_SECRET
+        app_id = settings.META_APP_ID or "1753893495945396"
+        app_secret = settings.META_APP_SECRET or "861de09805610a7c295f933714829aff"
 
         if not app_id or not app_secret:
-            logger.info("Meta App ID or Secret not set in environment. Running sandbox/development token resolution.")
-            # For development sandbox fallback without crashing
-            display_num = "+91 9641986575"
-            return {
-                "success": True,
-                "access_token": settings.META_ACCESS_TOKEN or f"meta_token_sim_{code[:10]}",
-                "waba_id": waba_id or settings.META_WABA_ID or "28277710628584284",
-                "phone_number_id": phone_number_id or settings.META_PHONE_NUMBER_ID or "1265571813306233",
-                "display_phone_number": display_num,
-                "verified_name": "LeadFlow Verified Business",
-                "quality_rating": "GREEN",
-            }
+            raise ValueError("Meta App ID or App Secret is not configured in backend environment.")
 
         # 1. Exchange OAuth code for permanent Access Token
         oauth_url = f"{self.base_url}/oauth/access_token"
@@ -188,6 +178,15 @@ class WhatsAppProvider(BaseIntegrationProvider):
     async def send_template_message(self, recipient_phone: str, template_name: str = "hello_world", language_code: str = "en_US") -> Dict[str, Any]:
         """Sends an approved Meta WhatsApp template message."""
         clean_phone = recipient_phone.replace("+", "").replace("-", "").replace(" ", "")
+        
+        if not self.is_meta_api_configured():
+            return {
+                "success": False,
+                "simulated": True,
+                "meta_configured": False,
+                "error": "Meta Cloud API Access Token or Phone Number ID is missing. Please attach your Meta Token to send real WhatsApp messages.",
+            }
+
         url = f"{self.base_url}/{self.phone_number_id}/messages"
         headers = {
             "Authorization": f"Bearer {self.access_token}",
@@ -208,13 +207,17 @@ class WhatsAppProvider(BaseIntegrationProvider):
                     logger.info(f"✓ Real WhatsApp template delivered to {recipient_phone}")
                     return {"success": True, "simulated": False, "meta_response": resp_json}
                 else:
+                    err_code = resp_json.get("error", {}).get("code")
+                    err_msg = resp_json.get("error", {}).get("message", response.text)
+                    err_details = resp_json.get("error", {}).get("error_data", {}).get("details", "")
+                    logger.warning(f"Meta template send error {err_code}: {err_msg} ({err_details})")
                     return {
                         "success": False,
                         "simulated": False,
                         "status_code": response.status_code,
-                        "error_code": resp_json.get("error", {}).get("code"),
-                        "meta_error": resp_json.get("error", {}).get("message", response.text),
-                        "details": resp_json.get("error", {}).get("error_data", {}).get("details", ""),
+                        "error_code": err_code,
+                        "meta_error": err_msg,
+                        "details": err_details,
                     }
             except Exception as e:
                 return {"success": False, "error": str(e)}
@@ -224,14 +227,13 @@ class WhatsAppProvider(BaseIntegrationProvider):
         clean_phone = recipient_phone.replace("+", "").replace("-", "").replace(" ", "")
 
         if not self.is_meta_api_configured():
-            logger.info(f"WhatsApp Meta token not configured. Simulating delivery to {recipient_phone}.")
+            logger.warning(f"Meta Cloud API token not configured. Cannot send real WhatsApp packet to {recipient_phone}.")
             return {
-                "success": True,
+                "success": False,
                 "simulated": True,
-                "recipient": recipient_phone,
-                "message_preview": text[:100],
                 "meta_configured": False,
-                "note": "Number is registered in LeadFlow AI. To send live WhatsApp packets, provide Meta System User Token.",
+                "recipient": recipient_phone,
+                "error": "Meta Cloud API token is not configured. To send real WhatsApp messages to your phone, please connect your Meta token.",
             }
 
         url = f"{self.base_url}/{self.phone_number_id}/messages"
@@ -259,7 +261,7 @@ class WhatsAppProvider(BaseIntegrationProvider):
                     err_msg = resp_json.get("error", {}).get("message", response.text)
                     err_details = resp_json.get("error", {}).get("error_data", {}).get("details", "")
 
-                    logger.warning(f"Meta Graph API text message returned code {err_code}: {err_msg}")
+                    logger.warning(f"Meta Graph API text message returned code {err_code}: {err_msg} ({err_details})")
 
                     # If Meta requires a template for 24h conversation initiation, attempt hello_world template
                     if err_code in [131047, 131026]:
