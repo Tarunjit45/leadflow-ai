@@ -72,7 +72,10 @@ class Settings(BaseSettings):
     META_APP_SECRET: Optional[str] = os.getenv("META_APP_SECRET", "861de09805610a7c295f933714829aff")
     META_CONFIG_ID: Optional[str] = os.getenv("META_CONFIG_ID", "1070129732436618")  # Facebook Login for Business configuration ID
     META_VERIFY_TOKEN: str = os.getenv("META_VERIFY_TOKEN", "leadflow_whatsapp_webhook_verification_token_secret")
-    META_ACCESS_TOKEN: Optional[str] = os.getenv("META_ACCESS_TOKEN")
+    META_ACCESS_TOKEN: Optional[str] = os.getenv(
+        "META_ACCESS_TOKEN",
+        "EAAY7KCbMuLQBSYm0R46TYKrU0OwOlILvdBiWcYQBs8A4yZAelwrOI8cYvV6rjppNalDuEMXYJadLSOBwgInHVesC5XyZAuYq8GvxMHR22SIZB2uWte4DkJ5FLCEWkxYZCjakHKAAZC9fYBSWKGn470U1hzjLjdSK2hVdyqjX46z5sa2IEZA63sIS9q8Fag0Yic6z3YSIMEJrmiHl4TMtuIWpHFvdxv8MIvrwFlFzidfpwAOjlfUHffTrs9K8FrRz3ewDGC53BzcF73X7BCGrz0"
+    )
     META_PHONE_NUMBER_ID: Optional[str] = os.getenv("META_PHONE_NUMBER_ID", "1265571813306233")
     META_WABA_ID: Optional[str] = os.getenv("META_WABA_ID", "28277710628584284")
 
