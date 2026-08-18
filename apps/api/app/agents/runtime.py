@@ -85,6 +85,15 @@ class AgentRuntime:
         # Sanitize message
         cleaned_msg, is_suspicious = sanitize_and_check_input(customer_message_text)
 
+        OWNER_ONLY_TOOLS = {
+            "toggle_ai_automation",
+            "add_or_update_service_catalog",
+            "update_business_hours_schedule",
+            "get_owner_pipeline_summary",
+            "get_owner_appointments",
+            "get_owner_recent_leads",
+        }
+
         # Retrieve enabled tools
         agent_tools = self.db.query(AgentTool).filter(AgentTool.agent_id == agent.id).all()
         allowed_tools_map = {}
@@ -92,7 +101,7 @@ class AgentRuntime:
         if agent_tools:
             for at in agent_tools:
                 allowed_tools_map[at.tool_name] = at.enabled
-                if at.enabled:
+                if at.enabled and (sender_type == "owner" or at.tool_name not in OWNER_ONLY_TOOLS):
                     enabled_tool_names.append(at.tool_name)
         else:
             default_tools = ["qualify_and_update_lead", "get_calendar_availability", "book_appointment", "human_handoff", "notify_owner"]
@@ -149,6 +158,7 @@ class AgentRuntime:
                     tool_name=tool_name,
                     arguments_json=args,
                     allowed_tools=allowed_tools_map,
+                    is_owner=(sender_type == "owner"),
                 )
                 executed_tools.append({
                     "tool": tool_name,
@@ -279,6 +289,7 @@ class AgentRuntime:
                     tool_name=tool_name,
                     arguments_json=args,
                     allowed_tools=allowed_tools_map,
+                    is_owner=True,
                 )
                 executed_tools.append({
                     "tool": tool_name,

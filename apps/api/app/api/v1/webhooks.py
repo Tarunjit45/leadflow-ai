@@ -9,7 +9,7 @@ from apps.api.app.core.database import get_db
 from apps.api.app.core.idempotency import is_event_processed, mark_event_processed
 from apps.api.app.integrations.whatsapp import WhatsAppProvider
 from apps.api.app.integrations.payments import get_payment_provider
-from apps.api.app.models.models import Business, Conversation, Message, Subscription, PaymentProviderEvent
+from apps.api.app.models.models import Business, Conversation, Message, Subscription, PaymentProviderEvent, Integration
 from apps.api.app.agents.runtime import AgentRuntime
 
 logger = logging.getLogger(__name__)
@@ -110,15 +110,10 @@ async def receive_whatsapp_message(
                             break
 
                 if not business:
-                    business = (
-                        db.query(Business)
-                        .filter(Business.onboarding_completed == True)
-                        .order_by(Business.created_at.desc())
-                        .first()
+                    logger.warning(
+                        f"⚠️ Unmapped WhatsApp message received for phone_number_id '{phone_number_id}' "
+                        f"from sender '{from_number}'. Dropping message to guarantee strict multi-tenant isolation."
                     )
-                if not business:
-                    business = db.query(Business).order_by(Business.created_at.desc()).first()
-                if not business:
                     continue
 
                 # 2. Strict Role Separation: Is the sender the verified Business Owner?

@@ -70,6 +70,43 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"status": "error", "detail": exc.detail},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    errors = exc.errors()
+    clean_errors = []
+    for err in errors:
+        field = " -> ".join(str(loc) for loc in err.get("loc", []))
+        clean_errors.append(f"{field}: {err.get('msg')}")
+    return JSONResponse(
+        status_code=422,
+        content={"status": "error", "detail": "; ".join(clean_errors)},
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request, exc):
+    logger.error(f"Unhandled Exception on {request.url.path}: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "detail": "An internal server error occurred. Our engineering team has been alerted.",
+        },
+    )
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,

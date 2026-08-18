@@ -71,12 +71,21 @@ class ToolRegistry:
         tool_name: str,
         arguments_json: str,
         allowed_tools: Dict[str, bool],
+        is_owner: bool = False,
     ) -> Dict[str, Any]:
         """Validates permissions and safely executes the registered handler."""
         if tool_name not in self._tools:
             return {"success": False, "error": f"Tool '{tool_name}' is not recognized."}
 
         tool = self._tools[tool_name]
+
+        # Strict Server-Side Role Authorization Barrier
+        if getattr(tool, "permission_key", "").startswith("owner.") and not is_owner:
+            logger.warning(f"🚨 SECURITY ALERT: Unauthorized attempt by customer session to execute owner tool '{tool_name}' on business {business_id}")
+            return {
+                "success": False,
+                "error": f"Permission denied: Tool '{tool_name}' requires verified business owner authorization.",
+            }
 
         if not allowed_tools.get(tool_name, True):
             logger.warning(f"Permission denied for tool '{tool_name}' on business {business_id}")
@@ -363,34 +372,51 @@ async def _handle_qualify_lead(db: Session, business_id: str, conversation_id: s
 
 async def _handle_get_availability(db: Session, business_id: str, conversation_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
-    slots = []
+    biz = db.query(Business).filter(Business.id == business_id).first()
+    tz = biz.timezone if biz else "America/New_York"
     
+    # Query confirmed appointments in window
+    window_end = now + timedelta(days=5)
+    confirmed_appts = (
+        db.query(Appointment)
+        .filter(
+            Appointment.business_id == business_id,
+            Appointment.status == "confirmed",
+            Appointment.start_time >= now,
+            Appointment.start_time <= window_end,
+        )
+        .all()
+    )
+
+    slots = []
     for day_offset in range(1, 4):
         target_day = now + timedelta(days=day_offset)
-        slot_1_start = target_day.replace(hour=10, minute=0, second=0, microsecond=0)
-        slot_1_end = target_day.replace(hour=11, minute=0, second=0, microsecond=0)
-        slot_2_start = target_day.replace(hour=14, minute=0, second=0, microsecond=0)
-        slot_2_end = target_day.replace(hour=15, minute=0, second=0, microsecond=0)
+        for hour in [10, 14]:
+            s_time = target_day.replace(hour=hour, minute=0, second=0, microsecond=0)
+            e_time = target_day.replace(hour=hour+1, minute=0, second=0, microsecond=0)
 
-        slots.append({
-            "slot_id": f"slot_{day_offset}_1",
-            "date": target_day.strftime("%A, %B %d"),
-            "start_time": slot_1_start.isoformat(),
-            "end_time": slot_1_end.isoformat(),
-            "display": f"{target_day.strftime('%a, %b %d')} at 10:00 AM",
-        })
-        slots.append({
-            "slot_id": f"slot_{day_offset}_2",
-            "date": target_day.strftime("%A, %B %d"),
-            "start_time": slot_2_start.isoformat(),
-            "end_time": slot_2_end.isoformat(),
-            "display": f"{target_day.strftime('%a, %b %d')} at 2:00 PM",
-        })
+            # Check overlap
+            is_occupied = False
+            for appt in confirmed_appts:
+                appt_s = appt.start_time.replace(tzinfo=timezone.utc) if appt.start_time.tzinfo is None else appt.start_time
+                appt_e = appt.end_time.replace(tzinfo=timezone.utc) if appt.end_time.tzinfo is None else appt.end_time
+                if s_time < appt_e and e_time > appt_s:
+                    is_occupied = True
+                    break
+
+            if not is_occupied:
+                slots.append({
+                    "slot_id": f"slot_{day_offset}_{hour}",
+                    "date": target_day.strftime("%A, %B %d"),
+                    "start_time": s_time.isoformat(),
+                    "end_time": e_time.isoformat(),
+                    "display": f"{target_day.strftime('%a, %b %d')} at {s_time.strftime('%I:%M %p')}",
+                })
 
     return {
         "available_slots": slots,
         "total_slots": len(slots),
-        "timezone": "America/New_York",
+        "timezone": tz,
     }
 
 
@@ -398,10 +424,35 @@ async def _handle_book_appointment(db: Session, business_id: str, conversation_i
     start_str = args.get("start_time")
     try:
         start_time = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
     except Exception:
         start_time = datetime.now(timezone.utc) + timedelta(days=1, hours=2)
     
     end_time = start_time + timedelta(minutes=60)
+
+    # Concurrency-safe overlap check: (start_time < existing.end_time AND end_time > existing.start_time)
+    conflicting_query = (
+        db.query(Appointment)
+        .filter(
+            Appointment.business_id == business_id,
+            Appointment.status == "confirmed",
+            Appointment.start_time < end_time,
+            Appointment.end_time > start_time,
+        )
+    )
+    try:
+        conflict = conflicting_query.with_for_update().first()
+    except Exception:
+        conflict = conflicting_query.first()
+
+    if conflict:
+        return {
+            "status": "conflict",
+            "error": "The requested time slot has just been booked. Please ask the customer to select another time from the open slots.",
+            "success": False,
+        }
+
     lead = db.query(Lead).filter(Lead.conversation_id == conversation_id, Lead.business_id == business_id).first()
 
     appt = Appointment(
