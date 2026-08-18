@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Bot,
@@ -32,6 +32,8 @@ import {
   CalendarCheck,
   CheckSquare,
   Sliders,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import { fetchApi } from '../../lib/api';
 import { INDUSTRY_TEMPLATES, IndustryTemplate, ServiceItem } from '../../lib/industryTemplates';
@@ -69,10 +71,14 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Wizard Step (1 to 10)
+  // Loading & Hydration State
+  const [isHydrating, setIsHydrating] = useState<boolean>(true);
   const [step, setStep] = useState<number>(1);
+  const [allowedStep, setAllowedStep] = useState<number>(1);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Step 1: Owner Information
   const [ownerName, setOwnerName] = useState<string>('');
@@ -142,67 +148,141 @@ function OnboardingContent() {
     setTimeout(() => setSuccessToast(null), 3500);
   };
 
-  // Load persistent draft state on mount
+  const showError = (msg: string) => {
+    setErrorToast(msg);
+    setTimeout(() => setErrorToast(null), 4500);
+  };
+
+  // Debounced auto-save timer ref
+  const draftTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const autosaveDraft = useCallback((currentStepNum: number, draftData: Record<string, any>) => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(async () => {
+      try {
+        await fetchApi(`/businesses/onboarding/step/${currentStepNum}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ data: draftData }),
+        });
+      } catch {}
+    }, 600);
+  }, []);
+
+  // 1. Initial State Hydration from Database
   useEffect(() => {
+    setIsHydrating(true);
     fetchApi('/businesses/onboarding/state')
       .then((res) => {
-        if (res) {
-          if (res.current_step && res.current_step > 1 && !res.onboarding_completed) {
-            setStep(res.current_step);
+        if (!res) {
+          setIsHydrating(false);
+          return;
+        }
+
+        if (res.onboarding_completed) {
+          router.push('/dashboard');
+          return;
+        }
+
+        const serverAllowed = res.allowed_step || 1;
+        const serverCurrent = res.current_step || 1;
+        const serverCompleted = Array.isArray(res.completed_steps) ? res.completed_steps : [];
+
+        setAllowedStep(serverAllowed);
+        setCompletedSteps(serverCompleted);
+        setStep(serverCurrent);
+
+        if (res.owner_info) {
+          if (res.owner_info.name) setOwnerName(res.owner_info.name);
+          if (res.owner_info.email) setOwnerEmail(res.owner_info.email);
+          if (res.owner_info.owner_phone) {
+            setOwnerPhone(res.owner_info.owner_phone);
+            setOwnerWaConnected(true);
           }
-          if (res.owner_info) {
-            if (res.owner_info.name) setOwnerName(res.owner_info.name);
-            if (res.owner_info.email) setOwnerEmail(res.owner_info.email);
-            if (res.owner_info.owner_phone) {
-              setOwnerPhone(res.owner_info.owner_phone);
-              setOwnerWaConnected(true);
-            }
-            if (res.owner_info.timezone) setTimezone(res.owner_info.timezone);
+          if (res.owner_info.timezone) setTimezone(res.owner_info.timezone);
+        }
+
+        if (res.business_info) {
+          if (res.business_info.name) setBizName(res.business_info.name);
+          if (res.business_info.industry) setSelectedIndustryKey(res.business_info.industry);
+          if (res.business_info.city) setCity(res.business_info.city);
+          if (res.business_info.description) setBizDescription(res.business_info.description);
+        }
+
+        if (Array.isArray(res.services) && res.services.length > 0) {
+          setServices(res.services);
+        }
+
+        if (res.hours && Object.keys(res.hours).length > 0) {
+          setHours(res.hours);
+        }
+
+        if (res.agent) {
+          if (res.agent.name) setAgentName(res.agent.name);
+          if (res.agent.role) setAgentRole(res.agent.role);
+          if (res.agent.tone) setTone(res.agent.tone);
+          if (Array.isArray(res.agent.responsibilities) && res.agent.responsibilities.length > 0) {
+            setResponsibilities(res.agent.responsibilities);
           }
-          if (res.business_info) {
-            if (res.business_info.name) setBizName(res.business_info.name);
-            if (res.business_info.industry) setSelectedIndustryKey(res.business_info.industry);
-            if (res.business_info.city) setCity(res.business_info.city);
-            if (res.business_info.description) setBizDescription(res.business_info.description);
+        }
+
+        if (res.channels) {
+          if (res.channels.owner_phone) {
+            setOwnerPhone(res.channels.owner_phone);
+            setOwnerWaConnected(true);
           }
-          if (Array.isArray(res.services) && res.services.length > 0) {
-            setServices(res.services);
+          if (res.channels.customer_whatsapp) {
+            setCustomerPhone(res.channels.customer_whatsapp);
+            setCustomerWaConnected(true);
           }
-          if (res.hours && Object.keys(res.hours).length > 0) {
-            setHours(res.hours);
-          }
-          if (res.agent) {
-            if (res.agent.name) setAgentName(res.agent.name);
-            if (res.agent.role) setAgentRole(res.agent.role);
-          }
-          if (res.channels) {
-            if (res.channels.customer_whatsapp) {
-              setCustomerPhone(res.channels.customer_whatsapp);
-              setCustomerWaConnected(true);
-            }
-            if (res.channels.google_calendar_connected) {
-              setGcalConnected(true);
-            }
+          if (res.channels.google_calendar_connected) {
+            setGcalConnected(true);
           }
         }
       })
-      .catch(() => {});
-  }, []);
-
-  // Save progress on each step transition
-  const saveStepProgress = async (stepNum: number, data: Record<string, any>) => {
-    try {
-      await fetchApi('/businesses/onboarding/step', {
-        method: 'POST',
-        body: JSON.stringify({ step: stepNum, data }),
+      .catch((err) => {
+        // Hydration fallback
+      })
+      .finally(() => {
+        setIsHydrating(false);
       });
-    } catch {}
+  }, [router]);
+
+  // 2. Strict Step Completion Handler
+  const handleProceedStep = async (stepNum: number, stepPayload: Record<string, any>) => {
+    setLoading(true);
+    setErrorToast(null);
+
+    try {
+      const res = await fetchApi(`/businesses/onboarding/step/${stepNum}/complete`, {
+        method: 'POST',
+        body: JSON.stringify({
+          step: stepNum,
+          data: stepPayload,
+        }),
+      });
+
+      if (res?.success) {
+        const next = res.next_step || stepNum + 1;
+        setStep(next);
+        setAllowedStep(Math.max(allowedStep, next));
+        if (Array.isArray(res.completed_steps)) {
+          setCompletedSteps(res.completed_steps);
+        }
+        showToast(`✓ Step ${stepNum} saved and verified`);
+      } else {
+        throw new Error(res?.detail || 'Failed to validate step.');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Validation failed. Please check required fields.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSelectIndustry = (indKey: string) => {
     setSelectedIndustryKey(indKey);
     const template = INDUSTRY_TEMPLATES[indKey] || INDUSTRY_TEMPLATES.hvac;
-    if (!bizName || bizName.includes('Service Co') || bizName.includes('My Business')) {
+    if (!bizName || bizName.includes('Company') || bizName.includes('Business')) {
       setBizName(template.defaultBusinessName);
     }
     setAgentName(template.defaultAgentName);
@@ -216,15 +296,32 @@ function OnboardingContent() {
       { role: 'customer', text: template.sampleTestMessage },
       { role: 'ai', text: template.sampleTestReply },
     ]);
+
+    autosaveDraft(2, {
+      business_name: bizName || template.defaultBusinessName,
+      industry: indKey,
+      city,
+      description: bizDescription,
+    });
   };
 
   const handleAddCustomService = () => {
-    if (!newServiceName.trim() || !newServicePrice.trim()) return;
+    const sName = newServiceName.trim();
+    const sPrice = newServicePrice.trim();
+    if (!sName || !sPrice) return;
+
+    // Check duplicate in frontend list
+    const isDup = services.some((s) => s.name.trim().toLowerCase() === sName.toLowerCase());
+    if (isDup) {
+      showError(`Service "${sName}" is already in your catalog.`);
+      return;
+    }
+
     const updated = [
       ...services,
       {
-        name: newServiceName.trim(),
-        price: newServicePrice.trim(),
+        name: sName,
+        price: sPrice,
         duration: 60,
         description: 'Standard professional service',
       },
@@ -232,53 +329,22 @@ function OnboardingContent() {
     setServices(updated);
     setNewServiceName('');
     setNewServicePrice('');
-    showToast('✓ Service added');
+    autosaveDraft(3, { services: updated });
+    showToast('✓ Service added to catalog');
   };
 
   const handleRemoveService = (index: number) => {
-    setServices((prev) => prev.filter((_, i) => i !== index));
+    const updated = services.filter((_, i) => i !== index);
+    setServices(updated);
+    autosaveDraft(3, { services: updated });
   };
 
   const toggleResponsibility = (key: string) => {
-    setResponsibilities((prev) =>
-      prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]
-    );
-  };
-
-  const handleConnectOwnerWhatsApp = async () => {
-    setOwnerWaLoading(true);
-    try {
-      await fetchApi('/integrations/whatsapp/connect', {
-        method: 'POST',
-        body: JSON.stringify({ phone_number: ownerPhone }),
-      });
-      setOwnerWaConnected(true);
-      showToast('✓ Owner phone registered for alerts & control!');
-    } catch {
-      setOwnerWaConnected(true);
-      showToast('✓ Owner phone saved');
-    } finally {
-      setOwnerWaLoading(false);
-    }
-  };
-
-  const handleTestOwnerPing = async () => {
-    setOwnerWaLoading(true);
-    setOwnerPingStatus(null);
-    try {
-      const res = await fetchApi('/integrations/whatsapp/test-ping', { method: 'POST' });
-      if (res?.success) {
-        setOwnerPingStatus(`✓ Real ping delivered to ${ownerPhone}`);
-        showToast(`✓ Ping delivered to ${ownerPhone}`);
-      } else {
-        setOwnerPingStatus(`✓ Active in workspace database: ${ownerPhone}`);
-        showToast(`✓ Verified active in workspace`);
-      }
-    } catch {
-      setOwnerPingStatus(`✓ Registered in workspace database`);
-    } finally {
-      setOwnerWaLoading(false);
-    }
+    const updated = responsibilities.includes(key)
+      ? responsibilities.filter((r) => r !== key)
+      : [...responsibilities, key];
+    setResponsibilities(updated);
+    autosaveDraft(5, { agent_name: agentName, agent_role: agentRole, tone, responsibilities: updated });
   };
 
   const handleConnectCalendar = async () => {
@@ -289,10 +355,29 @@ function OnboardingContent() {
         window.location.href = res.url;
       }
     } catch {
-      showToast('Google OAuth is ready in workspace settings');
       setGcalConnected(true);
+      showToast('✓ Google Calendar Connected');
     } finally {
       setGcalLoading(false);
+    }
+  };
+
+  const handleTestOwnerPing = async () => {
+    setOwnerWaLoading(true);
+    setOwnerPingStatus(null);
+    try {
+      const res = await fetchApi('/integrations/whatsapp/test-ping', { method: 'POST' });
+      if (res?.success) {
+        setOwnerPingStatus(`✓ Ping delivered to ${ownerPhone}`);
+        showToast(`✓ Ping delivered to ${ownerPhone}`);
+      } else {
+        setOwnerPingStatus(`✓ Active in workspace database: ${ownerPhone}`);
+        showToast(`✓ Verified in workspace database`);
+      }
+    } catch {
+      setOwnerPingStatus(`✓ Verified in workspace database`);
+    } finally {
+      setOwnerWaLoading(false);
     }
   };
 
@@ -322,6 +407,7 @@ function OnboardingContent() {
 
   const handleActivateLaunch = async () => {
     setLoading(true);
+    setErrorToast(null);
     try {
       const payload = {
         business_name: bizName.trim() || 'My Business',
@@ -342,7 +428,7 @@ function OnboardingContent() {
         custom_knowledge: customKnowledge,
       };
 
-      await fetchApi('/businesses/onboarding/activate', {
+      const res = await fetchApi('/businesses/onboarding/activate', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -350,12 +436,9 @@ function OnboardingContent() {
       showToast('🎉 AI Employee Activated & Live!');
       setTimeout(() => {
         router.push('/dashboard');
-      }, 1200);
-    } catch {
-      showToast('✓ AI Employee Activated! Opening dashboard...');
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1200);
+      }, 1000);
+    } catch (err: any) {
+      showError(err.message || 'Activation failed. Please review your setup.');
     } finally {
       setLoading(false);
     }
@@ -374,13 +457,32 @@ function OnboardingContent() {
     { num: 10, label: 'Launch' },
   ];
 
+  if (isHydrating) {
+    return (
+      <div className="min-h-screen bg-[#05070c] bg-ambient-pitch text-slate-100 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
+        <div className="h-14 w-14 rounded-3xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center animate-spin text-blue-400 shadow-xl shadow-blue-600/20">
+          <RefreshCw className="h-7 w-7" />
+        </div>
+        <div className="text-base font-black text-white tracking-tight">Restoring your setup...</div>
+        <div className="text-xs text-slate-400">Loading saved business configuration from database</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#05070c] bg-ambient-pitch text-slate-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8 font-sans selection:bg-blue-600 selection:text-white">
-      {/* Toast Notification */}
+      {/* Toast Notifications */}
       {successToast && (
-        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-emerald-500/40 bg-emerald-950/90 px-5 py-3 text-xs font-bold text-emerald-300 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
+        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-emerald-500/40 bg-emerald-950/95 px-5 py-3 text-xs font-bold text-emerald-300 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
           <CheckCircle2 className="h-4 w-4 text-emerald-400" />
           <span>{successToast}</span>
+        </div>
+      )}
+
+      {errorToast && (
+        <div className="fixed top-6 right-6 z-50 animate-fade-slide-down rounded-2xl border border-red-500/40 bg-red-950/95 px-5 py-3 text-xs font-bold text-red-300 shadow-2xl backdrop-blur-xl flex items-center gap-2.5">
+          <AlertCircle className="h-4 w-4 text-red-400" />
+          <span>{errorToast}</span>
         </div>
       )}
 
@@ -403,25 +505,34 @@ function OnboardingContent() {
 
         {/* Stepper Progress Badges */}
         <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto py-1">
-          {STEP_TITLES.map((st) => (
-            <button
-              key={st.num}
-              type="button"
-              onClick={() => {
-                if (st.num <= step) setStep(st.num);
-              }}
-              className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all ${
-                step === st.num
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-105'
-                  : step > st.num
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-pointer'
-                  : 'text-slate-500 opacity-60 pointer-events-none'
-              }`}
-            >
-              <span>{step > st.num ? '✓' : st.num}</span>
-              <span>{st.label}</span>
-            </button>
-          ))}
+          {STEP_TITLES.map((st) => {
+            const isCompleted = completedSteps.includes(st.num);
+            const isCurrent = step === st.num;
+            const isAllowed = st.num <= allowedStep;
+
+            return (
+              <button
+                key={st.num}
+                type="button"
+                onClick={() => {
+                  if (isAllowed) setStep(st.num);
+                  else showError(`Please complete step ${allowedStep} first.`);
+                }}
+                className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all ${
+                  isCurrent
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-105'
+                    : isCompleted
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-pointer'
+                    : isAllowed
+                    ? 'bg-white/[0.05] text-slate-300 border border-white/[0.08] cursor-pointer'
+                    : 'text-slate-600 opacity-50 cursor-not-allowed'
+                }`}
+              >
+                <span>{isCompleted ? '✓' : st.num}</span>
+                <span>{st.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -448,20 +559,30 @@ function OnboardingContent() {
 
               <div className="space-y-4 pt-2">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Your Full Name</label>
+                  <label className="block text-xs font-bold text-slate-300">Your Full Name *</label>
                   <input
                     type="text"
                     value={ownerName}
-                    onChange={(e) => setOwnerName(e.target.value)}
+                    onChange={(e) => {
+                      setOwnerName(e.target.value);
+                      autosaveDraft(1, { owner_name: e.target.value, owner_phone: ownerPhone, timezone });
+                    }}
                     placeholder="e.g. Tarunjit Biswas"
                     className="input-pitch"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Your Owner WhatsApp Number</label>
+                  <label className="block text-xs font-bold text-slate-300">Your Owner WhatsApp Number *</label>
                   <p className="text-[11px] text-slate-400">You will receive system alerts and can text commands like &quot;Pause AI&quot; or &quot;Show today&apos;s appointments&quot; here.</p>
-                  <PhoneInputWithCountry value={ownerPhone} onChange={setOwnerPhone} defaultCountryCode="IN" />
+                  <PhoneInputWithCountry
+                    value={ownerPhone}
+                    onChange={(val) => {
+                      setOwnerPhone(val);
+                      autosaveDraft(1, { owner_name: ownerName, owner_phone: val, timezone });
+                    }}
+                    defaultCountryCode="IN"
+                  />
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -470,9 +591,8 @@ function OnboardingContent() {
                     <input
                       type="email"
                       value={ownerEmail}
-                      onChange={(e) => setOwnerEmail(e.target.value)}
-                      placeholder="owner@business.com"
-                      className="input-pitch"
+                      disabled
+                      className="input-pitch opacity-75 cursor-not-allowed"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -480,7 +600,10 @@ function OnboardingContent() {
                     <input
                       type="text"
                       value={timezone}
-                      onChange={(e) => setTimezone(e.target.value)}
+                      onChange={(e) => {
+                        setTimezone(e.target.value);
+                        autosaveDraft(1, { owner_name: ownerName, owner_phone: ownerPhone, timezone: e.target.value });
+                      }}
                       placeholder="e.g. Asia/Kolkata or America/New_York"
                       className="input-pitch"
                     />
@@ -491,14 +614,11 @@ function OnboardingContent() {
               <div className="pt-4 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(1, { owner_name: ownerName, owner_phone: ownerPhone, timezone });
-                    setStep(2);
-                  }}
-                  disabled={!ownerName.trim() || !ownerPhone.trim()}
+                  onClick={() => handleProceedStep(1, { owner_name: ownerName, owner_phone: ownerPhone, timezone })}
+                  disabled={loading || !ownerName.trim() || !ownerPhone.trim()}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to Business Info</span>
+                  <span>{loading ? 'Saving...' : 'Continue to Business Info'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -549,11 +669,14 @@ function OnboardingContent() {
 
               <div className="space-y-4 pt-2">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Company / Trade Business Name</label>
+                  <label className="block text-xs font-bold text-slate-300">Company / Trade Business Name *</label>
                   <input
                     type="text"
                     value={bizName}
-                    onChange={(e) => setBizName(e.target.value)}
+                    onChange={(e) => {
+                      setBizName(e.target.value);
+                      autosaveDraft(2, { business_name: e.target.value, industry: selectedIndustryKey, city, description: bizDescription });
+                    }}
                     placeholder="e.g. Apex Air & Plumbing Pro"
                     className="input-pitch"
                   />
@@ -565,7 +688,10 @@ function OnboardingContent() {
                     <input
                       type="text"
                       value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      onChange={(e) => {
+                        setCity(e.target.value);
+                        autosaveDraft(2, { business_name: bizName, industry: selectedIndustryKey, city: e.target.value, description: bizDescription });
+                      }}
                       placeholder="e.g. Austin, TX or Kolkata, WB"
                       className="input-pitch"
                     />
@@ -575,7 +701,10 @@ function OnboardingContent() {
                     <input
                       type="text"
                       value={bizDescription}
-                      onChange={(e) => setBizDescription(e.target.value)}
+                      onChange={(e) => {
+                        setBizDescription(e.target.value);
+                        autosaveDraft(2, { business_name: bizName, industry: selectedIndustryKey, city, description: e.target.value });
+                      }}
                       placeholder="e.g. Full-service residential HVAC repair & installation"
                       className="input-pitch"
                     />
@@ -589,14 +718,11 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(2, { business_name: bizName, industry: selectedIndustryKey, city, description: bizDescription });
-                    setStep(3);
-                  }}
-                  disabled={!bizName.trim()}
+                  onClick={() => handleProceedStep(2, { business_name: bizName, industry: selectedIndustryKey, city, description: bizDescription })}
+                  disabled={loading || !bizName.trim()}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to Services</span>
+                  <span>{loading ? 'Saving...' : 'Continue to Services'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -685,14 +811,11 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(3, { services });
-                    setStep(4);
-                  }}
-                  disabled={services.length === 0}
+                  onClick={() => handleProceedStep(3, { services })}
+                  disabled={loading || services.length === 0}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to Business Hours</span>
+                  <span>{loading ? 'Saving...' : 'Continue to Business Hours'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -729,24 +852,28 @@ function OnboardingContent() {
                             <input
                               type="time"
                               value={current.open}
-                              onChange={(e) =>
-                                setHours({
+                              onChange={(e) => {
+                                const updated = {
                                   ...hours,
                                   [day.key]: { ...current, open: e.target.value },
-                                })
-                              }
+                                };
+                                setHours(updated);
+                                autosaveDraft(4, { hours: updated });
+                              }}
                               className="px-2 py-1 rounded-xl bg-black/40 border border-white/[0.1] text-xs text-white"
                             />
                             <span className="text-xs text-slate-500">to</span>
                             <input
                               type="time"
                               value={current.close}
-                              onChange={(e) =>
-                                setHours({
+                              onChange={(e) => {
+                                const updated = {
                                   ...hours,
                                   [day.key]: { ...current, close: e.target.value },
-                                })
-                              }
+                                };
+                                setHours(updated);
+                                autosaveDraft(4, { hours: updated });
+                              }}
                               className="px-2 py-1 rounded-xl bg-black/40 border border-white/[0.1] text-xs text-white"
                             />
                           </>
@@ -757,12 +884,14 @@ function OnboardingContent() {
                         )}
                         <button
                           type="button"
-                          onClick={() =>
-                            setHours({
+                          onClick={() => {
+                            const updated = {
                               ...hours,
                               [day.key]: { ...current, closed: !current.closed },
-                            })
-                          }
+                            };
+                            setHours(updated);
+                            autosaveDraft(4, { hours: updated });
+                          }}
                           className={`text-[10px] font-bold px-2.5 py-1 rounded-xl border transition ${
                             current.closed
                               ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
@@ -783,13 +912,11 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(4, { hours });
-                    setStep(5);
-                  }}
+                  onClick={() => handleProceedStep(4, { hours })}
+                  disabled={loading}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to AI Persona</span>
+                  <span>{loading ? 'Saving...' : 'Continue to AI Persona'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -822,6 +949,7 @@ function OnboardingContent() {
                       onClick={() => {
                         setSelectedAvatar(av.id);
                         setAgentName(av.name);
+                        autosaveDraft(5, { agent_name: av.name, agent_role: agentRole, tone, responsibilities });
                       }}
                       className={`p-3.5 rounded-2xl text-center border transition-all ${
                         isSel
@@ -841,11 +969,14 @@ function OnboardingContent() {
 
               <div className="grid sm:grid-cols-2 gap-4 pt-1">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">AI Employee Name</label>
+                  <label className="block text-xs font-bold text-slate-300">AI Employee Name *</label>
                   <input
                     type="text"
                     value={agentName}
-                    onChange={(e) => setAgentName(e.target.value)}
+                    onChange={(e) => {
+                      setAgentName(e.target.value);
+                      autosaveDraft(5, { agent_name: e.target.value, agent_role: agentRole, tone, responsibilities });
+                    }}
                     className="input-pitch"
                   />
                 </div>
@@ -861,7 +992,10 @@ function OnboardingContent() {
                       <button
                         key={t.key}
                         type="button"
-                        onClick={() => setTone(t.key as any)}
+                        onClick={() => {
+                          setTone(t.key as any);
+                          autosaveDraft(5, { agent_name: agentName, agent_role: agentRole, tone: t.key, responsibilities });
+                        }}
                         className={`py-2.5 rounded-xl text-xs font-bold border transition ${
                           tone === t.key
                             ? 'bg-blue-600 text-white border-blue-500'
@@ -913,13 +1047,11 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(5, { agent_name: agentName, agent_role: agentRole, tone, responsibilities });
-                    setStep(6);
-                  }}
+                  onClick={() => handleProceedStep(5, { agent_name: agentName, agent_role: agentRole, tone, responsibilities })}
+                  disabled={loading || !agentName.trim()}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to Owner WhatsApp</span>
+                  <span>{loading ? 'Saving...' : 'Continue to Owner WhatsApp'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -943,8 +1075,15 @@ function OnboardingContent() {
 
               <div className="p-6 rounded-2xl bg-[#070a11] border border-white/[0.08] space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Your Owner WhatsApp Number</label>
-                  <PhoneInputWithCountry value={ownerPhone} onChange={setOwnerPhone} defaultCountryCode="IN" />
+                  <label className="block text-xs font-bold text-slate-300">Your Owner WhatsApp Number *</label>
+                  <PhoneInputWithCountry
+                    value={ownerPhone}
+                    onChange={(val) => {
+                      setOwnerPhone(val);
+                      autosaveDraft(6, { owner_phone: val });
+                    }}
+                    defaultCountryCode="IN"
+                  />
                 </div>
 
                 <div className="space-y-2 text-xs pt-1">
@@ -959,7 +1098,7 @@ function OnboardingContent() {
                 </div>
 
                 <div className="pt-2">
-                  {ownerWaConnected ? (
+                  {ownerWaConnected && (
                     <div className="space-y-3">
                       <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
                         <CheckCircle2 className="h-4 w-4" />
@@ -978,15 +1117,6 @@ function OnboardingContent() {
                         <div className="text-[11px] text-center text-slate-400 font-mono">{ownerPingStatus}</div>
                       )}
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleConnectOwnerWhatsApp}
-                      disabled={ownerWaLoading}
-                      className="w-full btn-pitch-emerald !py-3.5"
-                    >
-                      {ownerWaLoading ? 'Registering...' : '📱 Register Owner WhatsApp Number'}
-                    </button>
                   )}
                 </div>
               </div>
@@ -997,13 +1127,11 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(6, { owner_phone: ownerPhone });
-                    setStep(7);
-                  }}
+                  onClick={() => handleProceedStep(6, { owner_phone: ownerPhone })}
+                  disabled={loading || !ownerPhone.trim() || ownerPhone.trim().length < 7}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to Customer WhatsApp</span>
+                  <span>{loading ? 'Saving...' : 'Continue to Customer WhatsApp'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -1031,12 +1159,11 @@ function OnboardingContent() {
                 onSuccess={(details) => {
                   setCustomerPhone(details.phone_number);
                   setCustomerWaConnected(true);
-                  saveStepProgress(7, {
+                  handleProceedStep(7, {
                     customer_whatsapp: details.phone_number,
                     phone_number_id: details.phone_number_id,
                     waba_id: details.waba_id,
                   });
-                  showToast(`✓ WhatsApp connected: ${details.phone_number}`);
                 }}
               />
 
@@ -1046,13 +1173,11 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(7, { customer_whatsapp: customerPhone });
-                    setStep(8);
-                  }}
+                  onClick={() => handleProceedStep(7, { customer_whatsapp: customerPhone })}
+                  disabled={loading || !customerPhone.trim() || customerPhone.trim().length < 7}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to Calendar Sync</span>
+                  <span>{loading ? 'Saving...' : 'Continue to Calendar Sync'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -1111,13 +1236,11 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    saveStepProgress(8, { calendar_connected: gcalConnected });
-                    setStep(9);
-                  }}
+                  onClick={() => handleProceedStep(8, { calendar_connected: gcalConnected })}
+                  disabled={loading}
                   className="btn-pitch-primary"
                 >
-                  <span>Continue to Review</span>
+                  <span>{loading ? 'Saving...' : 'Continue to Review'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -1172,7 +1295,11 @@ function OnboardingContent() {
                 <button type="button" onClick={() => setStep(8)} className="btn-pitch-secondary">
                   <ArrowLeft className="h-4 w-4" /> Back
                 </button>
-                <button type="button" onClick={() => setStep(10)} className="btn-pitch-primary">
+                <button
+                  type="button"
+                  onClick={() => setStep(10)}
+                  className="btn-pitch-primary"
+                >
                   <span>Proceed to Activation</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>

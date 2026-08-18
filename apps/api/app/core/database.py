@@ -28,6 +28,33 @@ def get_sanitized_db_url(raw_url: str | None) -> str:
     return url
 
 
+def run_auto_migrations(eng, target_url: str):
+    """Ensures newly added columns exist in PostgreSQL and SQLite without data loss."""
+    try:
+        with eng.connect() as conn:
+            if not target_url.startswith("sqlite"):
+                migration_statements = [
+                    "ALTER TABLE businesses ADD COLUMN IF NOT EXISTS owner_phone VARCHAR(50);",
+                    "ALTER TABLE businesses ADD COLUMN IF NOT EXISTS customer_whatsapp_number VARCHAR(50);",
+                    "ALTER TABLE businesses ADD COLUMN IF NOT EXISTS onboarding_step INTEGER DEFAULT 1;",
+                    "ALTER TABLE businesses ADD COLUMN IF NOT EXISTS completed_steps JSON DEFAULT '[]'::json;",
+                    "ALTER TABLE businesses ADD COLUMN IF NOT EXISTS onboarding_state JSON DEFAULT '{}'::json;",
+                    "ALTER TABLE businesses ADD COLUMN IF NOT EXISTS onboarding_version INTEGER DEFAULT 1;",
+                    "ALTER TABLE businesses ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER DEFAULT 1;",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;",
+                ]
+                for stmt in migration_statements:
+                    try:
+                        conn.execute(text(stmt))
+                    except Exception:
+                        pass
+                conn.commit()
+                logger.info("✓ Auto-migrations verified on PostgreSQL database.")
+    except Exception as e:
+        logger.warning(f"Auto-migration check notice: {e}")
+
+
 def create_safe_engine(url_str: str):
     """Creates a database engine with automatic fallback to SQLite on connection failure."""
     target_url = get_sanitized_db_url(url_str)
@@ -45,6 +72,7 @@ def create_safe_engine(url_str: str):
         # Test connection immediately on initialization
         with eng.connect() as conn:
             conn.execute(text("SELECT 1"))
+        run_auto_migrations(eng, target_url)
         logger.info(f"Database successfully connected to {'PostgreSQL' if not target_url.startswith('sqlite') else 'SQLite'}.")
         return eng, target_url
     except Exception as e:

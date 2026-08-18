@@ -69,7 +69,9 @@ class Business(Base):
     average_job_value = Column(Float, default=850.0)  # For estimated revenue recovery calculations
     onboarding_completed = Column(Boolean, default=False)
     onboarding_step = Column(Integer, default=1)  # 1 to 10
+    completed_steps = Column(JSON, default=list)  # [1, 2, 3, ...]
     onboarding_state = Column(JSON, default=dict)  # Persistent draft step state
+    onboarding_version = Column(Integer, default=1)  # For concurrent tab update conflict detection
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 

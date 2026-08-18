@@ -95,7 +95,9 @@ class BusinessUpdate(BaseModel):
     average_job_value: Optional[float] = None
     onboarding_completed: Optional[bool] = None
     onboarding_step: Optional[int] = None
+    completed_steps: Optional[List[int]] = None
     onboarding_state: Optional[Dict[str, Any]] = None
+    onboarding_version: Optional[int] = None
 
 
 class BusinessOut(BaseModel):
@@ -114,7 +116,9 @@ class BusinessOut(BaseModel):
     average_job_value: float
     onboarding_completed: bool
     onboarding_step: int = 1
+    completed_steps: List[int] = []
     onboarding_state: Dict[str, Any] = {}
+    onboarding_version: int = 1
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -123,6 +127,12 @@ class BusinessOut(BaseModel):
 class OnboardingStepPayload(BaseModel):
     step: int
     data: Dict[str, Any]
+    version: Optional[int] = None
+
+
+class OnboardingDraftPayload(BaseModel):
+    data: Dict[str, Any]
+    version: Optional[int] = None
 
 
 class OnboardingPayload(BaseModel):

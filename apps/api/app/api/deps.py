@@ -53,19 +53,47 @@ async def get_current_business(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Business:
-    """Resolves authenticated tenant (Business) from current user's real membership."""
+    """Resolves authenticated tenant (Business) from current user's real membership, creating exactly 1 workspace if missing."""
     membership = (
         db.query(BusinessMember)
         .filter(BusinessMember.user_id == current_user.id)
         .first()
     )
     if not membership:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No business workspace found for this account. Please complete setup.",
+        biz_name = f"{(current_user.name or 'My').split()[0]}'s Business"
+        business = Business(
+            name=biz_name,
+            onboarding_completed=False,
+            onboarding_step=1,
+            completed_steps=[],
+            onboarding_state={},
+            onboarding_version=1,
         )
+        db.add(business)
+        db.flush()
+        membership = BusinessMember(
+            business_id=business.id,
+            user_id=current_user.id,
+            role="owner"
+        )
+        db.add(membership)
+        db.commit()
+        db.refresh(business)
+        return business
     
     business = db.query(Business).filter(Business.id == membership.business_id).first()
     if not business:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business workspace not found.")
+        business = Business(
+            name=f"{(current_user.name or 'My').split()[0]}'s Business",
+            onboarding_completed=False,
+            onboarding_step=1,
+            completed_steps=[],
+            onboarding_state={},
+            onboarding_version=1,
+        )
+        db.add(business)
+        db.flush()
+        membership.business_id = business.id
+        db.commit()
+        db.refresh(business)
     return business

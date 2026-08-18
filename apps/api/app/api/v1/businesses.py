@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Any, List
+from datetime import datetime, timezone
+from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from apps.api.app.core.database import get_db
@@ -37,13 +38,25 @@ def update_business(
     return BusinessOut.model_validate(business)
 
 
+from apps.api.app.core.validators import (
+    normalize_email,
+    validate_owner_name,
+    validate_phone_number,
+    validate_business_name,
+    validate_services_catalog,
+    validate_business_hours_schedule,
+    validate_agent_persona,
+)
+from apps.api.app.schemas.schemas import OnboardingDraftPayload
+
+
 @router.get("/onboarding/state")
 def get_onboarding_state(
     business: Business = Depends(get_current_business),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Returns persistent onboarding wizard progress, draft data, and step completion statuses."""
+    """Returns persistent, server-authoritative onboarding wizard progress, draft data, and validated milestones."""
     knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business.id).first()
     agent = db.query(Agent).filter(Agent.business_id == business.id).first()
     gcal = db.query(Integration).filter(
@@ -57,86 +70,93 @@ def get_onboarding_state(
         Integration.status == "connected"
     ).first()
 
-    # Step completion evaluations
-    step_1_valid = bool(current_user.name and (business.owner_phone or current_user.email))
-    step_2_valid = bool(business.name and len(business.name.strip()) > 1)
-    step_3_valid = bool(knowledge and knowledge.services and len(knowledge.services) > 0)
-    step_4_valid = bool(knowledge and knowledge.hours and len(knowledge.hours) > 0)
-    step_5_valid = bool(agent and agent.name and len(agent.name.strip()) > 0)
-    step_6_valid = bool(business.owner_phone and len(business.owner_phone.strip()) >= 7)
-    step_7_valid = bool((business.customer_whatsapp_number or business.phone) and len((business.customer_whatsapp_number or business.phone).strip()) >= 7)
-    step_8_valid = True  # Optional / Recommended
-    step_9_valid = step_1_valid and step_2_valid and step_3_valid and step_4_valid and step_5_valid and step_6_valid and step_7_valid
+    completed = list(business.completed_steps or [])
+    # Allowed step prevents jumping ahead via URL manipulation
+    max_completed = max(completed) if completed else 0
+    allowed_step = max_completed + 1 if max_completed < 10 else 10
+    active_step = business.onboarding_step or 1
+    # If active step is higher than allowed, clamp to allowed
+    effective_step = min(active_step, allowed_step)
+
+    drafts = business.onboarding_state or {}
 
     return {
         "business_id": business.id,
         "onboarding_completed": business.onboarding_completed,
-        "current_step": business.onboarding_step or 1,
-        "state_data": business.onboarding_state or {},
+        "current_step": effective_step,
+        "allowed_step": allowed_step,
+        "completed_steps": completed,
+        "onboarding_version": business.onboarding_version or 1,
+        "draft_data": drafts,
         "validations": {
-            "step_1_owner_info": step_1_valid,
-            "step_2_business_info": step_2_valid,
-            "step_3_services": step_3_valid,
-            "step_4_hours": step_4_valid,
-            "step_5_ai_employee": step_5_valid,
-            "step_6_owner_whatsapp": step_6_valid,
-            "step_7_customer_whatsapp": step_7_valid,
+            "step_1_owner_info": 1 in completed or bool(current_user.name and business.owner_phone),
+            "step_2_business_info": 2 in completed or bool(business.name and len(business.name.strip()) > 1),
+            "step_3_services": 3 in completed or bool(knowledge and knowledge.services and len(knowledge.services) > 0),
+            "step_4_hours": 4 in completed or bool(knowledge and knowledge.hours and len(knowledge.hours) > 0),
+            "step_5_ai_employee": 5 in completed or bool(agent and agent.name and len(agent.name.strip()) > 0),
+            "step_6_owner_whatsapp": 6 in completed or bool(business.owner_phone and len(business.owner_phone.strip()) >= 7),
+            "step_7_customer_whatsapp": 7 in completed or bool((business.customer_whatsapp_number or business.phone) and len((business.customer_whatsapp_number or business.phone).strip()) >= 7),
             "step_8_calendar": bool(gcal),
-            "ready_for_activation": step_9_valid,
+            "ready_for_activation": all(s in completed for s in [1, 2, 3, 4, 5, 6, 7]),
         },
         "owner_info": {
-            "name": current_user.name,
+            "name": current_user.name or drafts.get("draft_step_1", {}).get("owner_name", ""),
             "email": current_user.email,
-            "owner_phone": business.owner_phone,
-            "timezone": business.timezone,
+            "owner_phone": business.owner_phone or drafts.get("draft_step_1", {}).get("owner_phone", ""),
+            "timezone": business.timezone or drafts.get("draft_step_1", {}).get("timezone", "Asia/Kolkata"),
         },
         "business_info": {
-            "name": business.name,
-            "industry": business.industry,
-            "city": business.address,
+            "name": business.name or drafts.get("draft_step_2", {}).get("business_name", ""),
+            "industry": business.industry or drafts.get("draft_step_2", {}).get("industry", "hvac"),
+            "city": business.address or drafts.get("draft_step_2", {}).get("city", ""),
             "timezone": business.timezone,
-            "description": business.description,
+            "description": business.description or drafts.get("draft_step_2", {}).get("description", ""),
         },
-        "services": knowledge.services if knowledge else [],
-        "hours": knowledge.hours if knowledge else {},
+        "services": knowledge.services if (knowledge and knowledge.services) else drafts.get("draft_step_3", {}).get("services", []),
+        "hours": knowledge.hours if (knowledge and knowledge.hours) else drafts.get("draft_step_4", {}).get("hours", {}),
         "agent": {
-            "name": agent.name if agent else "LeadFlow AI Assistant",
-            "role": agent.role if agent else "Sales & Appointment Specialist",
+            "name": agent.name if agent else drafts.get("draft_step_5", {}).get("agent_name", "LeadFlow AI Assistant"),
+            "role": agent.role if agent else drafts.get("draft_step_5", {}).get("agent_role", "Sales & Appointment Specialist"),
+            "tone": drafts.get("draft_step_5", {}).get("tone", "friendly"),
+            "responsibilities": drafts.get("draft_step_5", {}).get("responsibilities", []),
             "status": agent.status if agent else "active",
         },
         "channels": {
-            "owner_phone": business.owner_phone,
-            "customer_whatsapp": business.customer_whatsapp_number or business.phone,
+            "owner_phone": business.owner_phone or drafts.get("draft_step_6", {}).get("owner_phone", ""),
+            "customer_whatsapp": business.customer_whatsapp_number or business.phone or drafts.get("draft_step_7", {}).get("customer_whatsapp", ""),
             "google_calendar_connected": bool(gcal),
             "whatsapp_connected": bool(wa_integ or business.owner_phone),
         },
     }
 
 
-@router.post("/onboarding/step")
-def save_onboarding_step(
-    payload: OnboardingStepPayload,
+@router.patch("/onboarding/step/{step}")
+def autosave_onboarding_draft(
+    step: int,
+    payload: OnboardingDraftPayload,
     business: Business = Depends(get_current_business),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Saves partial onboarding step draft to database so user never loses progress on reload."""
+    """Debounced auto-save endpoint for partial drafts. Preserves form input while user is typing."""
+    if step < 1 or step > 10:
+        raise HTTPException(status_code=400, detail="Invalid step index.")
+
     current_state = dict(business.onboarding_state or {})
-    current_state[f"step_{payload.step}"] = payload.data
+    current_state[f"draft_step_{step}"] = payload.data
     business.onboarding_state = current_state
-    business.onboarding_step = max(business.onboarding_step or 1, payload.step)
+    business.onboarding_version = (business.onboarding_version or 1) + 1
 
     data = payload.data
-    # Apply step updates immediately to core database models
-    if payload.step == 1:
+    # Sync safe partial values to database
+    if step == 1:
         if data.get("owner_name"):
             current_user.name = data["owner_name"].strip()
         if data.get("owner_phone"):
             business.owner_phone = data["owner_phone"].strip()
         if data.get("timezone"):
             business.timezone = data["timezone"].strip()
-
-    elif payload.step == 2:
+    elif step == 2:
         if data.get("business_name"):
             business.name = data["business_name"].strip()
         if data.get("industry"):
@@ -145,24 +165,7 @@ def save_onboarding_step(
             business.address = data["city"].strip()
         if data.get("description"):
             business.description = data["description"].strip()
-
-    elif payload.step == 3:
-        if "services" in data:
-            knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business.id).first()
-            if not knowledge:
-                knowledge = BusinessKnowledge(business_id=business.id)
-                db.add(knowledge)
-            knowledge.services = data["services"]
-
-    elif payload.step == 4:
-        if "hours" in data:
-            knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business.id).first()
-            if not knowledge:
-                knowledge = BusinessKnowledge(business_id=business.id)
-                db.add(knowledge)
-            knowledge.hours = data["hours"]
-
-    elif payload.step == 5:
+    elif step == 5:
         agent = db.query(Agent).filter(Agent.business_id == business.id).first()
         if not agent:
             agent = Agent(business_id=business.id)
@@ -172,17 +175,130 @@ def save_onboarding_step(
         if data.get("agent_role"):
             agent.role = data["agent_role"].strip()
 
-    elif payload.step == 6:
-        if data.get("owner_phone"):
-            business.owner_phone = data["owner_phone"].strip()
+    db.commit()
+    return {
+        "success": True,
+        "step": step,
+        "version": business.onboarding_version,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+    }
 
-    elif payload.step == 7:
-        if data.get("customer_whatsapp"):
-            business.customer_whatsapp_number = data["customer_whatsapp"].strip()
-            business.phone = data["customer_whatsapp"].strip()
+
+@router.post("/onboarding/step/{step}/complete")
+@router.post("/onboarding/step")
+def complete_onboarding_step(
+    step: int = 1,
+    payload: Optional[OnboardingStepPayload] = None,
+    business: Business = Depends(get_current_business),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Strictly validates step data, commits changes to the database,
+    marks step as completed, and increments the active onboarding step.
+    """
+    target_step = payload.step if payload and payload.step else step
+    data = payload.data if payload else {}
+
+    # Strict Per-Step Validation
+    if target_step == 1:
+        valid_name = validate_owner_name(data.get("owner_name") or current_user.name)
+        valid_phone = validate_phone_number(data.get("owner_phone") or business.owner_phone, "Owner WhatsApp Number")
+        current_user.name = valid_name
+        business.owner_phone = valid_phone
+        if data.get("timezone"):
+            business.timezone = data["timezone"].strip()
+
+    elif target_step == 2:
+        valid_biz_name = validate_business_name(data.get("business_name") or business.name)
+        business.name = valid_biz_name
+        if data.get("industry"):
+            business.industry = data["industry"].strip()
+        if data.get("city"):
+            business.address = data["city"].strip()
+        if data.get("description"):
+            business.description = data["description"].strip()
+
+    elif target_step == 3:
+        valid_services = validate_services_catalog(data.get("services"))
+        knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business.id).first()
+        if not knowledge:
+            knowledge = BusinessKnowledge(business_id=business.id)
+            db.add(knowledge)
+        knowledge.services = valid_services
+
+    elif target_step == 4:
+        valid_hours = validate_business_hours_schedule(data.get("hours"))
+        knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business.id).first()
+        if not knowledge:
+            knowledge = BusinessKnowledge(business_id=business.id)
+            db.add(knowledge)
+        knowledge.hours = valid_hours
+
+    elif target_step == 5:
+        persona = validate_agent_persona(
+            name=data.get("agent_name"),
+            role=data.get("agent_role"),
+            tone=data.get("tone"),
+            responsibilities=data.get("responsibilities"),
+        )
+        agent = db.query(Agent).filter(Agent.business_id == business.id).first()
+        if not agent:
+            agent = Agent(business_id=business.id)
+            db.add(agent)
+        agent.name = persona["name"]
+        agent.role = persona["role"]
+
+    elif target_step == 6:
+        valid_owner_phone = validate_phone_number(data.get("owner_phone") or business.owner_phone, "Owner WhatsApp Number")
+        business.owner_phone = valid_owner_phone
+
+    elif target_step == 7:
+        valid_customer_phone = validate_phone_number(data.get("customer_whatsapp") or business.customer_whatsapp_number or business.phone, "Customer WhatsApp Number")
+        
+        # Check duplicate WhatsApp connection across active businesses
+        existing_other = (
+            db.query(Business)
+            .filter(
+                Business.id != business.id,
+                Business.onboarding_completed == True,
+                (Business.customer_whatsapp_number == valid_customer_phone) | (Business.phone == valid_customer_phone),
+            )
+            .first()
+        )
+        if existing_other:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"This WhatsApp number ({valid_customer_phone}) is already connected to another business workspace.",
+            )
+
+        business.customer_whatsapp_number = valid_customer_phone
+        business.phone = valid_customer_phone
+
+    # Record step completion
+    completed = set(business.completed_steps or [])
+    completed.add(target_step)
+    business.completed_steps = sorted(list(completed))
+
+    # Update draft state
+    current_state = dict(business.onboarding_state or {})
+    current_state[f"step_{target_step}"] = data
+    business.onboarding_state = current_state
+
+    # Advance current step
+    business.onboarding_step = max(business.onboarding_step or 1, target_step + 1)
+    business.onboarding_version = (business.onboarding_version or 1) + 1
 
     db.commit()
-    return {"status": "saved", "step": payload.step, "next_step": payload.step + 1}
+    db.refresh(business)
+
+    return {
+        "success": True,
+        "step": target_step,
+        "next_step": target_step + 1,
+        "completed_steps": business.completed_steps,
+        "onboarding_version": business.onboarding_version,
+    }
 
 
 @router.post("/onboarding/activate", response_model=BusinessOut)
@@ -197,24 +313,42 @@ async def complete_onboarding(
     Validates all mandatory onboarding criteria, activates the AI employee,
     dispatches genuine WhatsApp Welcome message to the Owner phone, and sends onboarding email.
     """
-    # 1. Update Core Business Information
-    business.name = payload.business_name.strip()
+    # 1. Update and validate Core Business Information
+    business.name = validate_business_name(payload.business_name)
     business.industry = payload.industry.strip()
     business.website = payload.website.strip() if payload.website else None
     
-    # Store both Owner Phone and Customer WhatsApp Number
-    owner_phone_val = (payload.owner_phone or payload.phone or "").strip()
-    customer_phone_val = (payload.customer_whatsapp_number or payload.phone or "").strip()
+    # Validate Phone Numbers
+    owner_phone_val = validate_phone_number(payload.owner_phone or business.owner_phone or payload.phone, "Owner WhatsApp Number")
+    customer_phone_val = validate_phone_number(payload.customer_whatsapp_number or business.customer_whatsapp_number or payload.phone, "Customer WhatsApp Number")
+
+    # Check WhatsApp duplication
+    dup = (
+        db.query(Business)
+        .filter(
+            Business.id != business.id,
+            Business.onboarding_completed == True,
+            (Business.customer_whatsapp_number == customer_phone_val) | (Business.phone == customer_phone_val),
+        )
+        .first()
+    )
+    if dup:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"The customer WhatsApp number {customer_phone_val} is already connected to another business.",
+        )
     
-    business.owner_phone = owner_phone_val or business.owner_phone
-    business.customer_whatsapp_number = customer_phone_val or business.customer_whatsapp_number or owner_phone_val
-    business.phone = customer_phone_val or owner_phone_val or business.phone
+    business.owner_phone = owner_phone_val
+    business.customer_whatsapp_number = customer_phone_val
+    business.phone = customer_phone_val
     
-    business.address = payload.address.strip() if payload.address else business.address
+    business.address = payload.address.strip() if payload.address else (business.address or "Local Service Area")
     business.timezone = payload.timezone or business.timezone or "America/New_York"
     business.description = payload.description.strip() if payload.description else business.description
     business.onboarding_completed = True
     business.onboarding_step = 10
+    business.completed_steps = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    business.onboarding_version = (business.onboarding_version or 1) + 1
 
     # 2. Update Knowledge Base
     knowledge = db.query(BusinessKnowledge).filter(BusinessKnowledge.business_id == business.id).first()
@@ -223,9 +357,9 @@ async def complete_onboarding(
         db.add(knowledge)
 
     if payload.services:
-        knowledge.services = payload.services
+        knowledge.services = validate_services_catalog(payload.services)
     if payload.hours:
-        knowledge.hours = payload.hours
+        knowledge.hours = validate_business_hours_schedule(payload.hours)
     if payload.service_areas:
         knowledge.service_areas = payload.service_areas
     if payload.custom_knowledge:
@@ -237,8 +371,14 @@ async def complete_onboarding(
         agent = Agent(business_id=business.id)
         db.add(agent)
 
-    agent.name = payload.agent_name.strip()
-    agent.role = payload.agent_role.strip()
+    persona = validate_agent_persona(
+        name=payload.agent_name,
+        role=payload.agent_role,
+        tone=payload.agent_tone,
+        responsibilities=payload.agent_responsibilities,
+    )
+    agent.name = persona["name"]
+    agent.role = persona["role"]
     agent.status = "active"
 
     db.commit()
